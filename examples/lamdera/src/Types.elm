@@ -6,17 +6,20 @@ import Url exposing (Url)
 
 
 type alias FrontendModel =
+    ( FAppModel, () )
+
+
+type alias FAppModel =
     { key : Key
     , message : String
     }
 
 
-type alias BackendModel =
-    { message : String
-    }
+type alias FrontendMsg =
+    ( Maybe FAppMsg, () )
 
 
-type FrontendMsg
+type FAppMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
     | NoOpFrontendMsg
@@ -26,7 +29,20 @@ type ToBackend
     = NoOpToBackend
 
 
-type BackendMsg
+type alias BackendModel =
+    ( BAppModel, () )
+
+
+type alias BAppModel =
+    { message : String
+    }
+
+
+type alias BackendMsg =
+    ( Maybe BAppMsg, () )
+
+
+type BAppMsg
     = NoOpBackendMsg
 
 

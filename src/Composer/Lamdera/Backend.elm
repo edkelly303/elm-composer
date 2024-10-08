@@ -21,7 +21,7 @@ addComponent component builder =
     , setters = NT.setter builder.setters
     , initer = NT.folder (initer component.init) builder.initer
     , updater = NT.folder3 (Composer.updater component.update) builder.updater
-    , updaterFromFrontend = NT.folder3 (updaterFromFrontend component.updateFromFrontend) builder.updaterFromFrontend
+    , updaterFromFrontend = NT.folder updaterFromFrontend builder.updaterFromFrontend
     , subscriber = NT.folder2 (Composer.subscriber component.subscriptions) builder.subscriber
     }
 
@@ -83,60 +83,34 @@ initer componentInit setter acc =
     }
 
 
-updaterFromFrontend componentUpdate setter maybeThisComponentMsg thisComponentModel acc =
+updaterFromFrontend setter acc =
     let
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
-        sendToApp msg =
-            ( Just msg, acc.emptyComponentsMsg )
-
         appUpdate =
             acc.appUpdate sendToComponent
-
-        ( newThisComponentModel, thisCmd ) =
-            case maybeThisComponentMsg of
-                Just thisComponentMsg ->
-                    componentUpdate
-                        sendToApp
-                        sendToComponent
-                        thisComponentMsg
-                        thisComponentModel
-
-                Nothing ->
-                    ( thisComponentModel, Cmd.none )
     in
     { appUpdate = appUpdate
-    , componentCmdsList = thisCmd :: acc.componentCmdsList
-    , newComponentsModel = NT.appender newThisComponentModel acc.newComponentsModel
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
 
 
-updateFromFrontend setters sendToApp builder sessionId clientId ( maybeAppMsg, componentsMsg ) ( appModel, componentsModel ) =
+updateFromFrontend setters sendToApp builder sessionId clientId msgFromFrontend ( appModel, componentsModel ) =
     let
         gatherUpdates =
-            NT.endFolder3 builder.updaterFromFrontend
+            NT.endFolder builder.updaterFromFrontend
 
-        { appUpdate, componentCmdsList, newComponentsModel } =
+        { appUpdate } =
             gatherUpdates
                 { appUpdate = builder.app.updateFromFrontend
-                , componentCmdsList = []
-                , newComponentsModel = NT.define
                 , emptyComponentsMsg = builder.emptyComponentsMsg
                 }
                 setters
-                componentsMsg
-                componentsModel
 
         ( newAppModel, appCmd ) =
-            case maybeAppMsg of
-                Just appMsg ->
-                    appUpdate sendToApp sessionId clientId appMsg appModel
-
-                Nothing ->
-                    ( appModel, Cmd.none )
+            appUpdate sendToApp sessionId clientId msgFromFrontend appModel
     in
-    ( ( newAppModel, NT.endAppender newComponentsModel )
-    , Cmd.batch (appCmd :: componentCmdsList)
+    ( ( newAppModel, componentsModel )
+    , appCmd
     )

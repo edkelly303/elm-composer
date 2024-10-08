@@ -9,6 +9,7 @@
         "direct": {
             "edkelly303/elm-nested-tuples": "1.0.2",
             "elm/browser": "1.0.2",
+            "elm/bytes": "1.0.8",
             "elm/core": "1.0.5",
             "elm/html": "1.0.0",
             "elm/url": "1.0.0",
@@ -16,7 +17,6 @@
             "lamdera/core": "1.0.0"
         },
         "indirect": {
-            "elm/bytes": "1.0.8",
             "elm/file": "1.0.5",
             "elm/http": "2.0.0",
             "elm/json": "1.1.3",

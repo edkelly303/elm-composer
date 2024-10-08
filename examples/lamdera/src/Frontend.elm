@@ -2,34 +2,32 @@ module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
+import Composer.Lamdera.Frontend as Composer
 import Html
 import Html.Attributes as Attr
 import Lamdera
 import Types exposing (..)
 import Url
-import Composer.Lamdera.Frontend
-
-type alias Model =
-    FrontendModel
 
 
 app =
     Lamdera.frontend composition
 
-composition = 
-    Composer.Lamdera.Frontend.defineApp
+
+composition =
+    Composer.defineApp
         { init = \sendToSelf url key -> init url key |> Tuple.mapSecond (Cmd.map sendToSelf)
         , onUrlRequest = UrlClicked
         , onUrlChange = UrlChanged
         , update = \sendToSelf msg model -> update msg model |> Tuple.mapSecond (Cmd.map sendToSelf)
         , updateFromBackend = \sendToSelf msg model -> updateFromBackend msg model |> Tuple.mapSecond (Cmd.map sendToSelf)
         , subscriptions = \sendToSelf model -> Sub.none
-        , view = \sendToSelf model -> {title = "title", body = []}
+        , view = view
         }
-        |> Composer.Lamdera.Frontend.done
+        |> Composer.done
 
 
-init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
+init : Url.Url -> Nav.Key -> ( FAppModel, Cmd FAppMsg )
 init url key =
     ( { key = key
       , message = "Welcome to Lamdera! You're looking at the auto-generated base implementation. Check out src/Frontend.elm to start coding!"
@@ -38,7 +36,7 @@ init url key =
     )
 
 
-update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
+update : FAppMsg -> FAppModel -> ( FAppModel, Cmd FAppMsg )
 update msg model =
     case msg of
         UrlClicked urlRequest ->
@@ -60,15 +58,15 @@ update msg model =
             ( model, Cmd.none )
 
 
-updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
+updateFromBackend : ToFrontend -> FAppModel -> ( FAppModel, Cmd FAppMsg )
 updateFromBackend msg model =
     case msg of
         NoOpToFrontend ->
             ( model, Cmd.none )
 
 
-view : Model -> Browser.Document FrontendMsg
-view model =
+view : (FAppMsg -> FrontendMsg) -> FAppModel -> Browser.Document FrontendMsg
+view sendToSelf model =
     { title = ""
     , body =
         [ Html.div [ Attr.style "text-align" "center", Attr.style "padding-top" "40px" ]

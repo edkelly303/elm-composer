@@ -22,7 +22,7 @@ addComponent component builder =
     , setters = NT.setter builder.setters
     , initer = NT.folder (initer component.init) builder.initer
     , updater = NT.folder3 (Composer.updater component.update) builder.updater
-    , updaterFromBackend = NT.folder3 (Composer.updater component.updateFromBackend) builder.updaterFromBackend
+    , updaterFromBackend = NT.folder updaterFromBackend builder.updaterFromBackend
     , viewer = NT.folder2 (Composer.viewer component.view) builder.viewer
     , subscriber = NT.folder2 (Composer.subscriber component.subscriptions) builder.subscriber
     }
@@ -38,7 +38,7 @@ done builder =
     in
     { init = init setters sendToApp builder
     , update = Composer.update setters sendToApp builder
-    , updateFromBackend = Composer.update setters sendToApp builder
+    , updateFromBackend = updateFromBackend setters sendToApp builder
     , view = Composer.view setters sendToApp builder
     , subscriptions = Composer.subscriptions setters sendToApp builder
     , onUrlRequest = \urlRequest -> builder.app.onUrlRequest urlRequest |> sendToApp
@@ -86,3 +86,36 @@ initer componentInit setter acc =
     , componentCmdsList = thisCmd :: acc.componentCmdsList
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
+
+
+updaterFromBackend setter acc =
+    let
+        sendToComponent msg =
+            ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
+
+        appUpdate =
+            acc.appUpdate sendToComponent
+    in
+    { appUpdate = appUpdate
+    , emptyComponentsMsg = acc.emptyComponentsMsg
+    }
+
+
+updateFromBackend setters sendToApp builder appMsg ( appModel, componentsModel ) =
+    let
+        gatherUpdates =
+            NT.endFolder builder.updaterFromBackend
+
+        { appUpdate } =
+            gatherUpdates
+                { appUpdate = builder.app.updateFromBackend
+                , emptyComponentsMsg = builder.emptyComponentsMsg
+                }
+                setters
+
+        ( newAppModel, appCmd ) =
+            appUpdate sendToApp appMsg appModel
+    in
+    ( ( newAppModel, componentsModel )
+    , appCmd
+    )
