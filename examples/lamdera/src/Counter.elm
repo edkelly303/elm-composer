@@ -26,7 +26,9 @@ update msg model =
 
         Decrement ->
             ( { model | count = model.count - 1 }, Cmd.none )
-        Noop -> (model, Cmd.none)
+
+        Noop ->
+            ( model, Cmd.none )
 
 
 view count =
