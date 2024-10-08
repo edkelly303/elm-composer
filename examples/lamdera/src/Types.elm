@@ -6,31 +6,34 @@ import Url exposing (Url)
 
 
 type alias FrontendModel =
-    ( FAppModel, () )
+    ( FAppModel, ( CounterModel, () ) )
 
 
 type alias FAppModel =
     { key : Key
-    , message : String
+    , count : Int
+    , backendCounter : Int
     }
 
 
 type alias FrontendMsg =
-    ( Maybe FAppMsg, () )
+    ( Maybe FAppMsg, ( Maybe CounterMsg, () ) )
 
 
 type FAppMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
-    | NoOpFrontendMsg
+    | FrontendCounterClicked CounterMsg
+    | BackendCounterClicked CounterMsg
 
 
 type ToBackend
-    = NoOpToBackend
+    = BackendCounterUpdateRequested CounterMsg
+    | BackendCounterStatusRequested
 
 
 type alias BackendModel =
-    ( BAppModel, () )
+    ( BAppModel, ( CounterModel, () ) )
 
 
 type alias BAppModel =
@@ -39,12 +42,22 @@ type alias BAppModel =
 
 
 type alias BackendMsg =
-    ( Maybe BAppMsg, () )
+    ( Maybe BAppMsg, ( Maybe CounterMsg, () ) )
 
 
 type BAppMsg
-    = NoOpBackendMsg
+    = CounterComponentUpdated Int
 
 
 type ToFrontend
-    = NoOpToFrontend
+    = BackendCounterUpdated Int
+
+
+type alias CounterModel =
+    { count : Int }
+
+
+type CounterMsg
+    = Increment
+    | Decrement
+    | Noop

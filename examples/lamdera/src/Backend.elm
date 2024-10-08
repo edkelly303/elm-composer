@@ -1,8 +1,11 @@
 module Backend exposing (..)
 
 import Composer.Lamdera.Backend as Composer
+import Counter
 import Html
 import Lamdera exposing (ClientId, SessionId)
+import Process
+import Task
 import Types exposing (..)
 
 
@@ -12,12 +15,30 @@ app =
 
 composition =
     Composer.defineApp
-        { init = \sendToSelf -> init |> Tuple.mapSecond (Cmd.map sendToSelf)
-        , update = \sendToSelf msg model -> update msg model |> Tuple.mapSecond (Cmd.map sendToSelf)
-        , updateFromFrontend = \sendToSelf sesId clId msg model -> updateFromFrontend sesId clId msg model |> Tuple.mapSecond (Cmd.map sendToSelf)
-        , subscriptions = \sendToSelf model -> Sub.none
+        { init = \sendToCounter sendToSelf -> init |> Tuple.mapSecond (Cmd.map sendToSelf)
+        , update = \sendToCounter sendToSelf msg model -> update msg model |> Tuple.mapSecond (Cmd.map sendToSelf)
+        , updateFromFrontend = updateFromFrontend
+        , subscriptions = \sendToCounter sendToSelf model -> Sub.none
         }
+        |> Composer.addComponent component
         |> Composer.done
+
+
+component =
+    let
+        replaceCmd sendToApp ( model, cmd ) =
+            ( model
+            , immediately sendToApp (CounterComponentUpdated model.count)
+            )
+    in
+    { init = Counter.component.init
+    , view = Counter.component.view
+    , subscriptions = Counter.component.subscriptions
+    , update =
+        \sendToApp sendToSelf msg model ->
+            Counter.update msg model
+                |> replaceCmd sendToApp
+    }
 
 
 init : ( BAppModel, Cmd BAppMsg )
@@ -30,12 +51,18 @@ init =
 update : BAppMsg -> BAppModel -> ( BAppModel, Cmd BAppMsg )
 update msg model =
     case msg of
-        NoOpBackendMsg ->
-            ( model, Cmd.none )
+        CounterComponentUpdated count ->
+            ( model, Lamdera.broadcast (BackendCounterUpdated count) )
 
 
-updateFromFrontend : SessionId -> ClientId -> ToBackend -> BAppModel -> ( BAppModel, Cmd BAppMsg )
-updateFromFrontend sessionId clientId msg model =
+updateFromFrontend sendToCounter sendToSelf sessionId clientId msg model =
     case msg of
-        NoOpToBackend ->
-            ( model, Cmd.none )
+        BackendCounterUpdateRequested counterMsg ->
+            ( model, immediately sendToCounter counterMsg )
+
+        BackendCounterStatusRequested ->
+            ( model, immediately sendToCounter Noop )
+
+
+immediately target msg =
+    Task.perform (\() -> target msg) (Process.sleep 0)
