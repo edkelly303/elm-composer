@@ -20,7 +20,7 @@ addComponent component builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters
-    , initer = NT.folder (Composer.initer component.init) builder.initer
+    , initer = NT.folder (initer component.init) builder.initer
     , updater = NT.folder3 (Composer.updater component.update) builder.updater
     , updaterFromBackend = NT.folder3 (Composer.updater component.updateFromBackend) builder.updaterFromBackend
     , viewer = NT.folder2 (Composer.viewer component.view) builder.viewer
@@ -46,7 +46,7 @@ done builder =
     }
 
 
-init setters sendToApp builder flags url key =
+init setters sendToApp builder url key =
     let
         initialise =
             NT.endFolder builder.initer
@@ -54,7 +54,6 @@ init setters sendToApp builder flags url key =
         { appInit, componentCmdsList, componentsModel } =
             initialise
                 { emptyComponentsMsg = builder.emptyComponentsMsg
-                , flags = flags
                 , appInit = builder.app.init
                 , componentCmdsList = []
                 , componentsModel = NT.define
@@ -62,8 +61,28 @@ init setters sendToApp builder flags url key =
                 setters
 
         ( appModel, appCmd ) =
-            appInit sendToApp flags url key
+            appInit sendToApp url key
     in
     ( ( appModel, NT.endAppender componentsModel )
     , Cmd.batch (appCmd :: componentCmdsList)
     )
+
+
+initer componentInit setter acc =
+    let
+        sendToComponent msg =
+            ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
+
+        sendToApp msg =
+            ( Just msg, acc.emptyComponentsMsg )
+
+        ( thisComponentModel, thisCmd ) =
+            componentInit
+                sendToApp
+                sendToComponent
+    in
+    { componentsModel = NT.appender thisComponentModel acc.componentsModel
+    , appInit = acc.appInit (\msg -> ( Nothing, setter (Just msg) acc.emptyComponentsMsg ))
+    , componentCmdsList = thisCmd :: acc.componentCmdsList
+    , emptyComponentsMsg = acc.emptyComponentsMsg
+    }
