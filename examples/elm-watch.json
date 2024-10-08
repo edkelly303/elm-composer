@@ -1,0 +1,18 @@
+{
+    "targets": {
+        "timer-demo": {
+            "inputs": [
+                "src/Timer.elm"
+            ],
+            "output": "public/build/timer.js"
+        },
+        "dnd-demo": {
+            "inputs": [
+                "src/DnD.elm"
+            ],
+            "output": "public/build/dnd.js"
+        }
+    },
+    "port": 8000,
+    "serve": "./public"
+}

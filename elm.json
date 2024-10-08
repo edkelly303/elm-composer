@@ -1,0 +1,22 @@
+{
+    "type": "package",
+    "name": "edkelly303/elm-composer",
+    "summary": "Compose Elm apps with typed message passing",
+    "license": "BSD-3-Clause",
+    "version": "1.0.0",
+    "exposed-modules": [
+        "Composer.Element",
+        "Composer.Document",
+        "Composer.Application",
+        "Composer.Lamdera.Frontend",
+        "Composer.Lamdera.Backend"
+    ],
+    "elm-version": "0.19.1 <= v < 0.20.0",
+    "dependencies": {
+        "edkelly303/elm-nested-tuples": "1.0.2 <= v < 2.0.0",
+        "elm/core": "1.0.0 <= v < 2.0.0"
+    },
+    "test-dependencies": {
+        "elm-explorations/test": "2.2.0 <= v < 3.0.0"
+    }
+}
