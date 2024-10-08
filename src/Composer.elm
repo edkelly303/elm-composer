@@ -3,10 +3,7 @@ module Composer exposing (..)
 import NestedTuple as NT
 
 
-
-
-
-initer component setter acc =
+initer componentInit setter acc =
     let
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
@@ -15,7 +12,7 @@ initer component setter acc =
             ( Just msg, acc.emptyComponentsMsg )
 
         ( thisComponentModel, thisCmd ) =
-            component.init
+            componentInit
                 sendToApp
                 sendToComponent
                 acc.flags
@@ -28,7 +25,7 @@ initer component setter acc =
     }
 
 
-updater component setter maybeThisComponentMsg thisComponentModel acc =
+updater componentUpdate setter maybeThisComponentMsg thisComponentModel acc =
     let
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
@@ -42,7 +39,7 @@ updater component setter maybeThisComponentMsg thisComponentModel acc =
         ( newThisComponentModel, thisCmd ) =
             case maybeThisComponentMsg of
                 Just thisComponentMsg ->
-                    component.update
+                    componentUpdate
                         sendToApp
                         sendToComponent
                         thisComponentMsg
@@ -58,7 +55,7 @@ updater component setter maybeThisComponentMsg thisComponentModel acc =
     }
 
 
-viewer component setter thisComponentModel acc =
+viewer componentView setter thisComponentModel acc =
     let
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
@@ -66,18 +63,18 @@ viewer component setter thisComponentModel acc =
         sendToApp msg =
             ( Just msg, acc.emptyComponentsMsg )
 
-        componentView =
-            component.view
+        componentView_ =
+            componentView
                 sendToApp
                 sendToComponent
                 thisComponentModel
     in
-    { appView = acc.appView componentView sendToComponent
+    { appView = acc.appView componentView_ sendToComponent
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
 
 
-subscriber component setter thisComponentModel acc =
+subscriber componentSubscriptions setter thisComponentModel acc =
     let
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
@@ -85,14 +82,14 @@ subscriber component setter thisComponentModel acc =
         sendToApp msg =
             ( Just msg, acc.emptyComponentsMsg )
 
-        componentSubscriptions =
-            component.subscriptions
+        componentSubscriptions_ =
+            componentSubscriptions
                 sendToApp
                 sendToComponent
                 thisComponentModel
     in
     { appSubscriptions = acc.appSubscriptions sendToComponent
-    , componentSubscriptionsList = componentSubscriptions :: acc.componentSubscriptionsList
+    , componentSubscriptionsList = componentSubscriptions_ :: acc.componentSubscriptionsList
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
 
