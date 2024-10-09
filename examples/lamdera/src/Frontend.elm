@@ -4,6 +4,7 @@ import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import Composer.Lamdera.Frontend as Composer
 import Counter
+import CounterComponent
 import Html
 import Html.Attributes as Attr
 import Lamdera
@@ -17,30 +18,28 @@ app =
 
 composition =
     Composer.defineApp
-        { init = \sendToCounter sendToSelf url key -> init url key |> Tuple.mapSecond (Cmd.map sendToSelf)
+        { init = init
         , onUrlRequest = UrlClicked
         , onUrlChange = UrlChanged
-        , update = \sendToCounter sendToSelf msg model -> update msg model |> Tuple.mapSecond (Cmd.map sendToSelf)
-        , updateFromBackend = \sendToCounter sendToSelf msg model -> updateFromBackend msg model |> Tuple.mapSecond (Cmd.map sendToSelf)
-        , subscriptions = \sendToCounter sendToSelf model -> Sub.none
+        , update = update
+        , updateFromBackend = updateFromBackend
+        , subscriptions = subscriptions
         , view = view
         }
-        |> Composer.addComponent Counter.component
+        |> Composer.addComponent (CounterComponent.element { onUpdate = Nothing })
         |> Composer.done
 
 
-init : Url.Url -> Nav.Key -> ( FAppModel, Cmd FAppMsg )
-init url key =
+init sendToCounter sendToSelf url key =
     ( { key = key
-      , count = 0
-      , backendCounter = 0
+      , frontendCounter = 0
+      , backendCounterComponent = 0
       }
-    , Lamdera.sendToBackend BackendCounterStatusRequested
+    , Lamdera.sendToBackend BackendCounterComponentStatusRequested
     )
 
 
-update : FAppMsg -> FAppModel -> ( FAppModel, Cmd FAppMsg )
-update msg model =
+update sendToCounter sendToSelf msg model =
     case msg of
         UrlClicked urlRequest ->
             case urlRequest of
@@ -58,69 +57,120 @@ update msg model =
             ( model, Cmd.none )
 
         FrontendCounterClicked counterMsg ->
-            Counter.update counterMsg model
+            ( { model | frontendCounter = Counter.update counterMsg model.frontendCounter }, Cmd.none )
 
         BackendCounterClicked counterMsg ->
-            ( model, Lamdera.sendToBackend (BackendCounterUpdateRequested counterMsg) )
+            ( model, Lamdera.sendToBackend (BackendCounterComponentUpdateRequested counterMsg) )
 
 
-updateFromBackend : ToFrontend -> FAppModel -> ( FAppModel, Cmd FAppMsg )
-updateFromBackend msg model =
+updateFromBackend sendToCounter sendToSelf msg model =
     case msg of
-        BackendCounterUpdated count ->
-            ( { model | backendCounter = count }, Cmd.none )
+        BackendCounterComponentStatusResponded count ->
+            ( { model | backendCounterComponent = count }
+            , Cmd.none
+            )
 
 
-view : Html.Html FrontendMsg -> (CounterMsg -> FrontendMsg) -> (FAppMsg -> FrontendMsg) -> FAppModel -> Browser.Document FrontendMsg
+subscriptions sendToCounter sendToSelf model =
+    Sub.none
+
+
 view viewCounter sendToCounter sendToSelf model =
     { title = "`elm-composer` in Lamdera"
     , body =
-        [ Html.h1 [] [ Html.text "Counter Components Demo" ]
-        , Html.p [] [ Html.text "This is a totally ordinary counter. The main frontend app is responsible for managing its state in `model.count`, and rendering its view." ]
-        , Counter.view model.count
-            |> Html.map (\counterMsg -> sendToSelf (FrontendCounterClicked counterMsg))
-        , Html.p [] [ Html.text "This counter is a component running in the frontend, completely independent of the main app. It manages its own state and renders its own view, which is passed into the main app's view for rendering." ]
-        , viewCounter
-        , Html.p [] [ Html.text "And this counter is a component running in the backend. It sends messages to the main backend app whenever its count changes, and the backend app broadcasts those messages to the frontend app. The frontend app then renders the counter and sends any `onClick` messages to the backend app, which relays them to the backend counter component." ]
-        , Counter.view model.backendCounter
-            |> Html.map (\counterMsg -> sendToSelf (BackendCounterClicked counterMsg))
-        , Html.p [] [ Html.text "Here's the Frontend model value printed out so you can see the above is true. Notice how the counter component is not present." ]
-        , Html.pre [] [ Html.text (Debug.toString model) ]
-        , Html.p [] [ Html.text "But we can still ask the Counter component to show us its own state. Here's the Counter.debug view" ]
-        , viewCounter
-
-        {-
-           @TODO hrm, viewCounter is already compiled to Html.Html FrontendMsg, so we can't pass arguments.
-           ideally we could pass in a record i.e. `viewCounter { mode = Counter.Debug }` to give the parent
-           a nice typed API to exert some external control over the view. Or maybe even viewCounter could be
-           an arbitrary record of values that result in Html.Html FrontendMsg, so one might have `viewCounter.view`
-           and `viewCounter.debug` and `viewCounter.somethingFancy { someArg = "blah" }`
-
-           I tried giving this a bash and got introduced to the nice error messages 😆
-
-           I'm imagining this could work well for complex components that have multiple view parts the user would
-           want to integrate into their own app in specific ways. For example:
-
-              viewCalendar : {
-                horizontal : { months : Int } -> Html.Html msg,
-                vertical : { months : Int } -> Html.Html msg,
-                datePicker : Html.Html msg
-              }
-
-            Where I may want to render the calendar in a horizontal layout with 3 months in my main column, but
-            in a vertical layout with 6 months in a sidebar, and also have a date picker component that I can
-            render in a modal or a sidebar or a dropdown or whatever.
-
-            So usage would become;
-
-              , p [] [ Html.text "Here's a calendar component" ]
-              , viewCalendar.horizontal { months = 3 }
-              , p [] [ Html.text "And here's a vertical calendar with 6 months over here" ]
-              viewCalendar.vertical { months = 6 }
-              , p [] [ Html.text "And here's a date picker over there" ]
-              , viewCalendar.datePicker
-
-
-        -}
+        [ Html.header [ Attr.style "text-align" "center" ]
+            [ Html.h1 [] [ Html.text "Counter Components Demo" ] ]
+        , Html.main_ [ Attr.style "padding" "20px" ]
+            [ Html.h2 [] [ Html.text "A simple counter" ]
+            , Counter.view model.frontendCounter
+                |> Html.map (\counterMsg -> sendToSelf (FrontendCounterClicked counterMsg))
+            , Html.p []
+                [ Html.text
+                    """
+                    This is a totally ordinary counter. The main frontend app is 
+                    responsible for managing its state (`model.frontendCounter`), 
+                    and rendering its view.
+                    """
+                ]
+            , Html.h2 [] [ Html.text "A counter component" ]
+            , viewCounter.html
+            , Html.p []
+                [ Html.text
+                    """
+                    This counter is a component running in the frontend, completely 
+                    independent of the main frontend app. It manages its own state 
+                    and provides its own view, which is passed into the main 
+                    frontend app's view for rendering.
+                    """
+                ]
+            , Html.h2 [] [ Html.text "A counter component running on the backend" ]
+            , Counter.view model.backendCounterComponent
+                |> Html.map (\counterMsg -> sendToSelf (BackendCounterClicked (CounterComponentUpdateRequested counterMsg)))
+            , Html.p []
+                [ Html.text
+                    """
+                    And this counter is a component running in the backend. It 
+                    sends messages to the main backend app whenever its count 
+                    changes, and the backend app broadcasts those messages to the 
+                    frontend app. The frontend app then renders the counter and 
+                    sends any `onClick` messages to the backend app, which relays 
+                    them to the backend counter component.
+                    """
+                ]
+            , Html.h2 [] [ Html.text "Really?" ]
+            , Html.p []
+                [ Html.text
+                    """
+                    Yes! Here's the main frontend app's model value printed out 
+                    with `Debug.toString`, so you can see the above is true. 
+                    """
+                ]
+            , Html.pre [Attr.style "font-size" "16px"] [ Html.text (Debug.toString model) ]
+            , Html.p []
+                [ Html.text
+                    """
+                    Notice how there is no field 
+                    called `frontendCounterComponent` - this is because the frontend 
+                    counter component's state is stored and managed completely 
+                    separately from the main frontend app's model.
+                    """
+                ]
+            , Html.p []
+                [ Html.text
+                    """
+                    Here is the state of the frontend counter component:
+                    """
+                ]
+            , Html.pre [Attr.style "font-size" "16px"] [ Html.text viewCounter.debug ]
+            , Html.p []
+                [ Html.text
+                    """
+                    We can only see this "debug view" of the component's state 
+                    because the author of the component has decided to make it 
+                    available to us as users. Our main frontend app doesn't have 
+                    direct access to the component's state.
+                    """
+                ]
+            , Html.p []
+                [ Html.text
+                    """
+                    You might also notice that the main frontend app's model 
+                    contains a field called `backendCounterComponent`. This is
+                    NOT the actual state of the backend counter component. It's just
+                    a copy of that state that the frontend app receives from the 
+                    backend and uses to render the counter. 
+                    """
+                ]
+            , Html.p []
+                [ Html.text
+                    """
+                    You can prove that the state is actually managed on the backend 
+                    by refreshing the page - you'll see that although the two 
+                    counters running on the frontend lose their state and get 
+                    reinitialised to zero when the page reloads, the backend counter
+                    component keeps its current value.
+                    """
+                ]
+            ]
         ]
     }

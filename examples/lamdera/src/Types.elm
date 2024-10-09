@@ -11,25 +11,25 @@ type alias FrontendModel =
 
 type alias FAppModel =
     { key : Key
-    , count : Int
-    , backendCounter : Int
+    , frontendCounter : Int
+    , backendCounterComponent : Int
     }
 
 
 type alias FrontendMsg =
-    ( Maybe FAppMsg, ( Maybe CounterMsg, () ) )
+    ( Maybe FAppMsg, ( Maybe CounterComponentMsg, () ) )
 
 
 type FAppMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
     | FrontendCounterClicked CounterMsg
-    | BackendCounterClicked CounterMsg
+    | BackendCounterClicked CounterComponentMsg
 
 
 type ToBackend
-    = BackendCounterUpdateRequested CounterMsg
-    | BackendCounterStatusRequested
+    = BackendCounterComponentUpdateRequested CounterComponentMsg
+    | BackendCounterComponentStatusRequested
 
 
 type alias BackendModel =
@@ -37,27 +37,30 @@ type alias BackendModel =
 
 
 type alias BAppModel =
-    { message : String
-    }
+    ()
 
 
 type alias BackendMsg =
-    ( Maybe BAppMsg, ( Maybe CounterMsg, () ) )
+    ( Maybe BAppMsg, ( Maybe CounterComponentMsg, () ) )
 
 
 type BAppMsg
-    = CounterComponentUpdated Int
+    = BackendCounterComponentUpdated Int
 
 
 type ToFrontend
-    = BackendCounterUpdated Int
+    = BackendCounterComponentStatusResponded Int
 
 
 type alias CounterModel =
-    { count : Int }
+    Int
 
 
 type CounterMsg
     = Increment
     | Decrement
-    | Noop
+
+
+type CounterComponentMsg
+    = CounterComponentStatusRequested
+    | CounterComponentUpdateRequested CounterMsg

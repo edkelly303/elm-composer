@@ -1,43 +1,32 @@
-module Counter exposing (component, init, update, view)
+module Counter exposing (init, update, view)
 
 import Html
+import Html.Attributes as Attr
 import Html.Events
 import Types exposing (CounterModel, CounterMsg(..))
 
 
-component =
-    { init = \sendToApp sendToSelf -> init |> Tuple.mapSecond (Cmd.map sendToSelf)
-    , update = \sendToApp sendToSelf msg model -> update msg model |> Tuple.mapSecond (Cmd.map sendToSelf)
-    , view = \sendToApp sendToSelf model -> view model.count |> Html.map sendToSelf
-    , subscriptions = \sendToApp sendToSelf model -> subscriptions model |> Sub.map sendToSelf
-    }
-
-
 init =
-    ( { count = 0 }
-    , Cmd.none
-    )
+    0
 
 
 update msg model =
     case msg of
         Increment ->
-            ( { model | count = model.count + 1 }, Cmd.none )
+            model + 1
 
         Decrement ->
-            ( { model | count = model.count - 1 }, Cmd.none )
-
-        Noop ->
-            ( model, Cmd.none )
+            model - 1
 
 
 view count =
-    Html.div []
-        [ Html.button [ Html.Events.onClick Decrement ] [ Html.text "-" ]
-        , Html.text (String.fromInt count)
-        , Html.button [ Html.Events.onClick Increment ] [ Html.text "+" ]
+    Html.article []
+        [ Html.button [ Html.Events.onClick Decrement ] [ Html.text "➖" ]
+        , Html.span
+            [ Attr.style "padding" "10px"
+            , Attr.style "font-family" "sans-serif"
+            , Attr.style "font-size" "20px"
+            ]
+            [ Html.text (String.fromInt count) ]
+        , Html.button [ Html.Events.onClick Increment ] [ Html.text "➕" ]
         ]
-
-
-subscriptions model =
-    Sub.none
