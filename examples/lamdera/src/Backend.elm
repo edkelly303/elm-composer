@@ -42,11 +42,7 @@ update sendToCounter sendToSelf msg model =
 updateFromFrontend sendToCounter sendToSelf sessionId clientId msg model =
     case msg of
         BackendCounterComponentUpdateRequested counterMsg ->
-            ( model, immediately sendToCounter counterMsg )
+            ( model, Task.perform sendToCounter (Task.succeed counterMsg) )
 
         BackendCounterComponentStatusRequested ->
-            ( model, immediately sendToCounter CounterComponentStatusRequested )
-
-
-immediately target msg =
-    Task.perform (\() -> target msg) (Process.sleep 0)
+            ( model, Task.perform sendToCounter (Task.succeed CounterComponentStatusRequested) )

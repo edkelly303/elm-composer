@@ -63,4 +63,5 @@ type CounterMsg
 
 type CounterComponentMsg
     = CounterComponentStatusRequested
-    | CounterComponentUpdateRequested CounterMsg
+    | CounterComponentIncremented
+    | CounterComponentDecremented

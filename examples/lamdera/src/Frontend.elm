@@ -105,7 +105,19 @@ view viewCounter sendToCounter sendToSelf model =
                 ]
             , Html.h2 [] [ Html.text "A counter component running on the backend" ]
             , Counter.view model.backendCounterComponent
-                |> Html.map (\counterMsg -> sendToSelf (BackendCounterClicked (CounterComponentUpdateRequested counterMsg)))
+                |> Html.map
+                    (\counterMsg ->
+                        sendToSelf
+                            (BackendCounterClicked
+                                (case counterMsg of
+                                    Increment ->
+                                        CounterComponentIncremented
+
+                                    Decrement ->
+                                        CounterComponentDecremented
+                                )
+                            )
+                    )
             , Html.p []
                 [ Html.text
                     """
@@ -125,7 +137,7 @@ view viewCounter sendToCounter sendToSelf model =
                     with `Debug.toString`, so you can see the above is true. 
                     """
                 ]
-            , Html.pre [Attr.style "font-size" "16px"] [ Html.text (Debug.toString model) ]
+            , Html.pre [ Attr.style "font-size" "16px" ] [ Html.text (Debug.toString model) ]
             , Html.p []
                 [ Html.text
                     """
@@ -141,7 +153,7 @@ view viewCounter sendToCounter sendToSelf model =
                     Here is the state of the frontend counter component:
                     """
                 ]
-            , Html.pre [Attr.style "font-size" "16px"] [ Html.text viewCounter.debug ]
+            , Html.pre [ Attr.style "font-size" "16px" ] [ Html.text viewCounter.debug ]
             , Html.p []
                 [ Html.text
                     """

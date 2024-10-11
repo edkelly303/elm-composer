@@ -26,13 +26,20 @@ update onUpdate sendToApp sendToSelf msg model =
                 CounterComponentStatusRequested ->
                     model
 
-                CounterComponentUpdateRequested counterMsg ->
-                    Counter.update counterMsg model
+                CounterComponentIncremented ->
+                    Counter.update Types.Increment model
+
+                CounterComponentDecremented ->
+                    Counter.update Types.Decrement model
     in
     ( newModel
     , case onUpdate of
         Just onUpdateMsg ->
-            immediately sendToApp (onUpdateMsg newModel)
+            newModel
+                |> onUpdateMsg
+                |> sendToApp
+                |> Task.succeed
+                |> Task.perform identity
 
         Nothing ->
             Cmd.none
@@ -42,14 +49,20 @@ update onUpdate sendToApp sendToSelf msg model =
 view sendToApp sendToSelf model =
     { html =
         Counter.view model
-            |> Html.map (CounterComponentUpdateRequested >> sendToSelf)
+            |> Html.map
+                (\counterMsg ->
+                    sendToSelf
+                        (case counterMsg of
+                            Types.Increment ->
+                                CounterComponentIncremented
+
+                            Types.Decrement ->
+                                CounterComponentDecremented
+                        )
+                )
     , debug = Debug.toString model
     }
 
 
 subscriptions sendToApp sendToSelf model =
     Sub.none
-
-
-immediately target msg =
-    Task.perform (\() -> target msg) (Process.sleep 0)
