@@ -52,10 +52,10 @@ app =
                 ItemsUpdated items ->
                     ( items, Cmd.none )
     , view =
-        \viewDnD sendToDnD sendToSelf model ->
+        \dnd sendToSelf model ->
             Html.div []
                 [ Html.p [] [ Html.text "This is the view of the `dndList` component:" ]
-                , viewDnD
+                , dnd.view
                 , Html.p [] [ Html.text "This is a `Debug.toString` of the `AppModel`:" ]
                 , Html.text (Debug.toString model)
                 ]

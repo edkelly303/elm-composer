@@ -75,7 +75,7 @@ subscriptions sendToCounter sendToSelf model =
     Sub.none
 
 
-view viewCounter sendToCounter sendToSelf model =
+view counter sendToSelf model =
     { title = "`elm-composer` in Lamdera"
     , body =
         [ Html.header [ Attr.style "text-align" "center" ]
@@ -93,7 +93,7 @@ view viewCounter sendToCounter sendToSelf model =
                     """
                 ]
             , Html.h2 [] [ Html.text "A counter component" ]
-            , viewCounter.html
+            , counter.view.html
             , Html.p []
                 [ Html.text
                     """
@@ -153,7 +153,7 @@ view viewCounter sendToCounter sendToSelf model =
                     Here is the state of the frontend counter component:
                     """
                 ]
-            , Html.pre [ Attr.style "font-size" "16px" ] [ Html.text viewCounter.debug ]
+            , Html.pre [ Attr.style "font-size" "16px" ] [ Html.text counter.view.debug ]
             , Html.p []
                 [ Html.text
                     """

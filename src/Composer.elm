@@ -69,7 +69,7 @@ viewer componentView setter thisComponentModel acc =
                 sendToComponent
                 thisComponentModel
     in
-    { appView = acc.appView componentView_ sendToComponent
+    { appView = acc.appView { view = componentView_, toMsg = sendToComponent }
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
 
