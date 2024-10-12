@@ -47,7 +47,7 @@ type AppMsg
 app =
     { init = \sendToDnD sendToSelf flags -> ( fruits, Cmd.none )
     , update =
-        \sendToDnD sendToSelf msg model ->
+        \dnd sendToSelf msg model ->
             case msg of
                 ItemsUpdated items ->
                     ( items, Cmd.none )

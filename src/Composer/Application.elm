@@ -19,10 +19,10 @@ addComponent component builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters
-    , initer = NT.folder (Composer.initer component.init) builder.initer
-    , updater = NT.folder3 (Composer.updater component.update) builder.updater
+    , initer = NT.folder (Composer.initer component.view component.init) builder.initer
+    , updater = NT.folder3 (Composer.updater component.view component.update) builder.updater
     , viewer = NT.folder2 (Composer.viewer component.view) builder.viewer
-    , subscriber = NT.folder2 (Composer.subscriber component.subscriptions) builder.subscriber
+    , subscriber = NT.folder2 (Composer.subscriber component.view component.subscriptions) builder.subscriber
     }
 
 

@@ -15,23 +15,23 @@ app =
 
 composition =
     Composer.defineApp
-        { init = \sendToCounter sendToSelf -> init |> Tuple.mapSecond (Cmd.map sendToSelf)
+        { init = init
         , update = update
         , updateFromFrontend = updateFromFrontend
-        , subscriptions = \sendToCounter sendToSelf model -> Sub.none
+        , subscriptions = \counter sendToSelf model -> Sub.none
         }
         |> Composer.addComponent (CounterComponent.element { onUpdate = Just BackendCounterComponentUpdated })
         |> Composer.done
 
 
-init : ( BAppModel, Cmd BAppMsg )
-init =
+
+init counter sendToSelf =
     ( ()
     , Cmd.none
     )
 
 
-update sendToCounter sendToSelf msg model =
+update counter sendToSelf msg model =
     case msg of
         BackendCounterComponentUpdated count ->
             ( model
@@ -39,10 +39,10 @@ update sendToCounter sendToSelf msg model =
             )
 
 
-updateFromFrontend sendToCounter sendToSelf sessionId clientId msg model =
+updateFromFrontend counter sendToSelf sessionId clientId msg model =
     case msg of
         BackendCounterComponentUpdateRequested counterMsg ->
-            ( model, Task.perform sendToCounter (Task.succeed counterMsg) )
+            ( model, Task.perform counter (Task.succeed counterMsg) )
 
         BackendCounterComponentStatusRequested ->
-            ( model, Task.perform sendToCounter (Task.succeed CounterComponentStatusRequested) )
+            ( model, Task.perform counter (Task.succeed CounterComponentStatusRequested) )

@@ -30,7 +30,7 @@ composition =
         |> Composer.done
 
 
-init sendToCounter sendToSelf url key =
+init counter sendToSelf url key =
     ( { key = key
       , frontendCounter = 0
       , backendCounterComponent = 0
@@ -39,7 +39,7 @@ init sendToCounter sendToSelf url key =
     )
 
 
-update sendToCounter sendToSelf msg model =
+update counter sendToSelf msg model =
     case msg of
         UrlClicked urlRequest ->
             case urlRequest of
@@ -63,7 +63,7 @@ update sendToCounter sendToSelf msg model =
             ( model, Lamdera.sendToBackend (BackendCounterComponentUpdateRequested counterMsg) )
 
 
-updateFromBackend sendToCounter sendToSelf msg model =
+updateFromBackend counter sendToSelf msg model =
     case msg of
         BackendCounterComponentStatusResponded count ->
             ( { model | backendCounterComponent = count }
@@ -71,7 +71,7 @@ updateFromBackend sendToCounter sendToSelf msg model =
             )
 
 
-subscriptions sendToCounter sendToSelf model =
+subscriptions counter sendToSelf model =
     Sub.none
 
 

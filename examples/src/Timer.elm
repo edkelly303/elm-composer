@@ -39,7 +39,7 @@ app =
         \sendToTimer sendToSelf flags ->
             ( { timerExpired = False }, Cmd.none )
     , update =
-        \sendToTimer sendToSelf msg model ->
+        \timer sendToSelf msg model ->
             case msg of
                 TimerExpired ->
                     ( { model | timerExpired = True }, Cmd.none )

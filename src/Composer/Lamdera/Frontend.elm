@@ -20,11 +20,11 @@ addComponent component builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters
-    , initer = NT.folder (initer component.init) builder.initer
-    , updater = NT.folder3 (Composer.updater component.update) builder.updater
+    , initer = NT.folder (initer component.view component.init) builder.initer
+    , updater = NT.folder3 (Composer.updater component.view component.update) builder.updater
     , updaterFromBackend = NT.folder updaterFromBackend builder.updaterFromBackend
     , viewer = NT.folder2 (Composer.viewer component.view) builder.viewer
-    , subscriber = NT.folder2 (Composer.subscriber component.subscriptions) builder.subscriber
+    , subscriber = NT.folder2 (Composer.subscriber component.view component.subscriptions) builder.subscriber
     }
 
 
@@ -68,7 +68,7 @@ init setters sendToApp builder url key =
     )
 
 
-initer componentInit setter acc =
+initer componentView componentInit setter acc =
     let
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
@@ -80,9 +80,14 @@ initer componentInit setter acc =
             componentInit
                 sendToApp
                 sendToComponent
+        view =
+            componentView
+                sendToApp
+                sendToComponent
+                thisComponentModel
     in
     { componentsModel = NT.appender thisComponentModel acc.componentsModel
-    , appInit = acc.appInit (\msg -> ( Nothing, setter (Just msg) acc.emptyComponentsMsg ))
+    , appInit = acc.appInit {toMsg = sendToComponent, view = view}
     , componentCmdsList = thisCmd :: acc.componentCmdsList
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
