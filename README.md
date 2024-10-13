@@ -54,7 +54,6 @@ and then in our main app, we'll do this:
 
 ```elm
 app =
-component =
   { init = ...
   , update = ...
 ``, subscriptions = ...
@@ -84,11 +83,10 @@ component =
   }
 ```
 
-This isn't simply a view, it's an interface - a way to control how the main app can interact with our component. And we use it thus:
+This isn't simply a view, it's an interface - a way to control how the main app is allowed to interact with our component. And we use it thus:
 
 ```elm
 app =
-component =
   { init = ...
   , update = ...
 ``, subscriptions = ...
@@ -100,3 +98,7 @@ component =
         ] 
   }
 ```
+
+The neat thing about this is that it lets us enforce as much or as little encapsulation of our components as we please. 
+- The main app cannot directly see what is in the component's model, unless our `interface` function returns that model.
+- The main app cannot send messages to the component, unless our `interface` function returns the component's `toSelf` message constructor, or provides specific message variants for the main app to send.
