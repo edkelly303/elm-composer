@@ -28,42 +28,38 @@ program =
         |> Composer.Element.addComponent
             (dndList
                 { items = fruits
-                , itemsUpdated = ItemsUpdated
                 }
             )
         |> Composer.Element.done
 
 
 type alias AppModel =
-    -- our `AppModel` knows _nothing at all_ about the `DnDList`; all it
-    -- contains is the list of items.
-    List String
+    -- our `AppModel` knows _nothing at all_ about the `DnDList`
+    ()
 
 
-type AppMsg
-    = ItemsUpdated (List String)
+type alias AppMsg
+    = ()
 
 
 app =
-    { init = \sendToDnD toSelf flags -> ( fruits, Cmd.none )
+    { init = \sendToDnD toSelf flags -> ( (), Cmd.none )
     , update =
         \dnd toSelf msg model ->
-            case msg of
-                ItemsUpdated items ->
-                    ( items, Cmd.none )
+            ( (), Cmd.none )
     , view =
         \dnd toSelf model ->
             Html.div []
                 [ Html.p [] [ Html.text "This is the view of the `dndList` component:" ]
-                , dnd
-                , Html.p [] [ Html.text "This is a `Debug.toString` of the `AppModel`:" ]
-                , Html.text (Debug.toString model)
+                , dnd.view
+                , Html.p [] [ Html.text "This is a `Debug.toString` of the list of items:" ]
+                , Html.text (Debug.toString dnd.items)
                 ]
     , subscriptions = \sendToDnD toSelf model -> Sub.none
     }
 
 
-dndList { items, itemsUpdated } =
+dndList { items } =
     { init =
         -- slightly modified the DnDList's `init` function to allow us to pass
         -- in the list of items during initialisation.
@@ -84,16 +80,12 @@ dndList { items, itemsUpdated } =
                             system.update dndMsg model.dnd model.items
                     in
                     ( { model | dnd = dnd, items = newItems }
-                    , Cmd.batch
-                        [ Cmd.map toSelf (system.commands dnd)
-                        , Task.perform (\_ -> toApp (itemsUpdated newItems)) (Process.sleep 0)
-                        ]
+                    , Cmd.map toSelf (system.commands dnd)
                     )
-    , interface =
-        -- `view` is exactly the same, we just need to map the `Html msg`
-        \toApp toSelf model ->
-            view model
-                |> Html.map toSelf
+    , interface = \toApp toSelf model ->
+            { view = view toApp toSelf model
+            , items = model.items
+            }
     , subscriptions =
         -- `subscriptions` is exactly the same, we just need to map the `Sub msg`
         \toApp toSelf model ->
@@ -135,8 +127,8 @@ subscriptions model =
     system.subscriptions model.dnd
 
 
-view : DnDModel -> Html.Html DnDMsg
-view model =
+
+view toApp toSelf model =
     Html.section
         [ Html.Attributes.style "text-align" "center" ]
         [ model.items
@@ -144,6 +136,7 @@ view model =
             |> Html.div []
         , ghostView model.dnd model.items
         ]
+        |> Html.map toSelf
 
 
 itemView : DnDList.Model -> Int -> String -> Html.Html DnDMsg
