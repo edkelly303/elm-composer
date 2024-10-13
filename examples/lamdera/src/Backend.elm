@@ -24,7 +24,6 @@ composition =
         |> Composer.done
 
 
-
 init counter toSelf =
     ( ()
     , Cmd.none

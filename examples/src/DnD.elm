@@ -38,8 +38,8 @@ type alias AppModel =
     ()
 
 
-type alias AppMsg
-    = ()
+type alias AppMsg =
+    ()
 
 
 app =
@@ -82,7 +82,8 @@ dndList { items } =
                     ( { model | dnd = dnd, items = newItems }
                     , Cmd.map toSelf (system.commands dnd)
                     )
-    , interface = \toApp toSelf model ->
+    , interface =
+        \toApp toSelf model ->
             { view = view toApp toSelf model
             , items = model.items
             }
@@ -125,7 +126,6 @@ type DnDMsg
 subscriptions : DnDModel -> Sub DnDMsg
 subscriptions model =
     system.subscriptions model.dnd
-
 
 
 view toApp toSelf model =
