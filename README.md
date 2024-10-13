@@ -84,6 +84,8 @@ component =
   }
 ```
 
+This isn't simply a view, it's an interface - a way to control how the main app can interact with our component. And we use it thus:
+
 ```elm
 app =
 component =
