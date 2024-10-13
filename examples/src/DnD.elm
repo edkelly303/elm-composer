@@ -55,7 +55,7 @@ app =
         \dnd sendToSelf model ->
             Html.div []
                 [ Html.p [] [ Html.text "This is the view of the `dndList` component:" ]
-                , dnd.view
+                , dnd
                 , Html.p [] [ Html.text "This is a `Debug.toString` of the `AppModel`:" ]
                 , Html.text (Debug.toString model)
                 ]
@@ -89,7 +89,7 @@ dndList { items, itemsUpdated } =
                         , Task.perform (\_ -> sendToApp (itemsUpdated newItems)) (Process.sleep 0)
                         ]
                     )
-    , view =
+    , interface =
         -- `view` is exactly the same, we just need to map the `Html msg`
         \sendToApp sendToSelf model ->
             view model

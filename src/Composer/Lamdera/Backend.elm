@@ -63,7 +63,7 @@ init setters sendToApp builder =
     )
 
 
-initer componentView componentInit setter acc =
+initer componentInterface componentInit setter acc =
     let
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
@@ -76,14 +76,14 @@ initer componentView componentInit setter acc =
                 sendToApp
                 sendToComponent
 
-        view =
-            componentView
+        interface =
+            componentInterface
                 sendToApp
                 sendToComponent
                 thisComponentModel
     in
     { componentsModel = NT.appender thisComponentModel acc.componentsModel
-    , appInit = acc.appInit { toMsg = sendToComponent, view = view }
+    , appInit = acc.appInit interface
     , componentCmdsList = thisCmd :: acc.componentCmdsList
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }

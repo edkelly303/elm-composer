@@ -129,8 +129,8 @@ timerComponent { timerExpired, timerReset } =
 
                 Reset ->
                     ( Nothing, Task.perform (\_ -> sendToApp timerReset) (Process.sleep 0) )
-    , view =
-        \sendToApp sendToSelf model ->
+    , interface =
+        \sendToApp sendToSelf model -> { toMsg = sendToSelf, view = 
             Html.article
                 [ Html.Attributes.style "border" "solid 1px pink"
                 , Html.Attributes.style "border-radius" "10px"
@@ -148,7 +148,7 @@ timerComponent { timerExpired, timerReset } =
                 , Html.button
                     [ Html.Events.onClick (sendToSelf Reset) ]
                     [ Html.text "Reset" ]
-                ]
+                ]}
     , subscriptions =
         \sendToApp sendToSelf model ->
             case model of
