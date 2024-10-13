@@ -45,21 +45,21 @@ type AppMsg
 
 
 app =
-    { init = \sendToDnD sendToSelf flags -> ( fruits, Cmd.none )
+    { init = \sendToDnD toSelf flags -> ( fruits, Cmd.none )
     , update =
-        \dnd sendToSelf msg model ->
+        \dnd toSelf msg model ->
             case msg of
                 ItemsUpdated items ->
                     ( items, Cmd.none )
     , view =
-        \dnd sendToSelf model ->
+        \dnd toSelf model ->
             Html.div []
                 [ Html.p [] [ Html.text "This is the view of the `dndList` component:" ]
                 , dnd
                 , Html.p [] [ Html.text "This is a `Debug.toString` of the `AppModel`:" ]
                 , Html.text (Debug.toString model)
                 ]
-    , subscriptions = \sendToDnD sendToSelf model -> Sub.none
+    , subscriptions = \sendToDnD toSelf model -> Sub.none
     }
 
 
@@ -67,7 +67,7 @@ dndList { items, itemsUpdated } =
     { init =
         -- slightly modified the DnDList's `init` function to allow us to pass
         -- in the list of items during initialisation.
-        \sendToApp sendToSelf flags ->
+        \toApp toSelf flags ->
             ( { dnd = system.model
               , items = items
               }
@@ -76,7 +76,7 @@ dndList { items, itemsUpdated } =
     , update =
         -- slightly modified the `update` function to send an `AppMsg` to the
         -- user's app whenever the list of items changes.
-        \sendToApp sendToSelf msg model ->
+        \toApp toSelf msg model ->
             case msg of
                 DnDMsg dndMsg ->
                     let
@@ -85,20 +85,20 @@ dndList { items, itemsUpdated } =
                     in
                     ( { model | dnd = dnd, items = newItems }
                     , Cmd.batch
-                        [ Cmd.map sendToSelf (system.commands dnd)
-                        , Task.perform (\_ -> sendToApp (itemsUpdated newItems)) (Process.sleep 0)
+                        [ Cmd.map toSelf (system.commands dnd)
+                        , Task.perform (\_ -> toApp (itemsUpdated newItems)) (Process.sleep 0)
                         ]
                     )
     , interface =
         -- `view` is exactly the same, we just need to map the `Html msg`
-        \sendToApp sendToSelf model ->
+        \toApp toSelf model ->
             view model
-                |> Html.map sendToSelf
+                |> Html.map toSelf
     , subscriptions =
         -- `subscriptions` is exactly the same, we just need to map the `Sub msg`
-        \sendToApp sendToSelf model ->
+        \toApp toSelf model ->
             subscriptions model
-                |> Sub.map sendToSelf
+                |> Sub.map toSelf
     }
 
 

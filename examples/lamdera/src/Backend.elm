@@ -18,20 +18,20 @@ composition =
         { init = init
         , update = update
         , updateFromFrontend = updateFromFrontend
-        , subscriptions = \counter sendToSelf model -> Sub.none
+        , subscriptions = \counter toSelf model -> Sub.none
         }
         |> Composer.addComponent (CounterComponent.element { onUpdate = Just BackendCounterComponentUpdated })
         |> Composer.done
 
 
 
-init counter sendToSelf =
+init counter toSelf =
     ( ()
     , Cmd.none
     )
 
 
-update counter sendToSelf msg model =
+update counter toSelf msg model =
     case msg of
         BackendCounterComponentUpdated count ->
             ( model
@@ -39,7 +39,7 @@ update counter sendToSelf msg model =
             )
 
 
-updateFromFrontend counter sendToSelf sessionId clientId msg model =
+updateFromFrontend counter toSelf sessionId clientId msg model =
     case msg of
         BackendCounterComponentUpdateRequested counterMsg ->
             ( model, Task.perform counter (Task.succeed counterMsg) )

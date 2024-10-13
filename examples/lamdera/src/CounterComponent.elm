@@ -15,11 +15,11 @@ element { onUpdate } =
     }
 
 
-init sendToApp sendToSelf =
+init toApp toSelf =
     ( Counter.init, Cmd.none )
 
 
-update onUpdate sendToApp sendToSelf msg model =
+update onUpdate toApp toSelf msg model =
     let
         newModel =
             case msg of
@@ -37,7 +37,7 @@ update onUpdate sendToApp sendToSelf msg model =
         Just onUpdateMsg ->
             newModel
                 |> onUpdateMsg
-                |> sendToApp
+                |> toApp
                 |> Task.succeed
                 |> Task.perform identity
 
@@ -46,12 +46,12 @@ update onUpdate sendToApp sendToSelf msg model =
     )
 
 
-interface sendToApp sendToSelf model =
+interface toApp toSelf model =
     { html =
         Counter.view model
             |> Html.map
                 (\counterMsg ->
-                    sendToSelf
+                    toSelf
                         (case counterMsg of
                             Types.Increment ->
                                 CounterComponentIncremented
@@ -64,5 +64,5 @@ interface sendToApp sendToSelf model =
     }
 
 
-subscriptions sendToApp sendToSelf model =
+subscriptions toApp toSelf model =
     Sub.none

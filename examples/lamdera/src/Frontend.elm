@@ -30,7 +30,7 @@ composition =
         |> Composer.done
 
 
-init counter sendToSelf url key =
+init counter toSelf url key =
     ( { key = key
       , frontendCounter = 0
       , backendCounterComponent = 0
@@ -39,7 +39,7 @@ init counter sendToSelf url key =
     )
 
 
-update counter sendToSelf msg model =
+update counter toSelf msg model =
     case msg of
         UrlClicked urlRequest ->
             case urlRequest of
@@ -63,7 +63,7 @@ update counter sendToSelf msg model =
             ( model, Lamdera.sendToBackend (BackendCounterComponentUpdateRequested counterMsg) )
 
 
-updateFromBackend counter sendToSelf msg model =
+updateFromBackend counter toSelf msg model =
     case msg of
         BackendCounterComponentStatusResponded count ->
             ( { model | backendCounterComponent = count }
@@ -71,11 +71,11 @@ updateFromBackend counter sendToSelf msg model =
             )
 
 
-subscriptions counter sendToSelf model =
+subscriptions counter toSelf model =
     Sub.none
 
 
-view counter sendToSelf model =
+view counter toSelf model =
     { title = "`elm-composer` in Lamdera"
     , body =
         [ Html.header [ Attr.style "text-align" "center" ]
@@ -83,7 +83,7 @@ view counter sendToSelf model =
         , Html.main_ [ Attr.style "padding" "20px" ]
             [ Html.h2 [] [ Html.text "A simple counter" ]
             , Counter.view model.frontendCounter
-                |> Html.map (\counterMsg -> sendToSelf (FrontendCounterClicked counterMsg))
+                |> Html.map (\counterMsg -> toSelf (FrontendCounterClicked counterMsg))
             , Html.p []
                 [ Html.text
                     """
@@ -107,7 +107,7 @@ view counter sendToSelf model =
             , Counter.view model.backendCounterComponent
                 |> Html.map
                     (\counterMsg ->
-                        sendToSelf
+                        toSelf
                             (BackendCounterClicked
                                 (case counterMsg of
                                     Increment ->

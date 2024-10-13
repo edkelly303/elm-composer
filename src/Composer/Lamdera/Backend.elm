@@ -31,17 +31,17 @@ done builder =
         setters =
             NT.endSetters builder.setters
 
-        sendToApp msg =
+        toApp msg =
             ( Just msg, builder.emptyComponentsMsg )
     in
-    { init = init setters sendToApp builder
-    , update = Composer.update setters sendToApp builder
-    , updateFromFrontend = updateFromFrontend setters sendToApp builder
-    , subscriptions = Composer.subscriptions setters sendToApp builder
+    { init = init setters toApp builder
+    , update = Composer.update setters toApp builder
+    , updateFromFrontend = updateFromFrontend setters toApp builder
+    , subscriptions = Composer.subscriptions setters toApp builder
     }
 
 
-init setters sendToApp builder =
+init setters toApp builder =
     let
         initialise =
             NT.endFolder builder.initer
@@ -56,7 +56,7 @@ init setters sendToApp builder =
                 setters
 
         ( appModel, appCmd ) =
-            appInit sendToApp
+            appInit toApp
     in
     ( ( appModel, NT.endAppender componentsModel )
     , Cmd.batch (appCmd :: componentCmdsList)
@@ -68,17 +68,17 @@ initer componentInterface componentInit setter acc =
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
-        sendToApp msg =
+        toApp msg =
             ( Just msg, acc.emptyComponentsMsg )
 
         ( thisComponentModel, thisCmd ) =
             componentInit
-                sendToApp
+                toApp
                 sendToComponent
 
         interface =
             componentInterface
-                sendToApp
+                toApp
                 sendToComponent
                 thisComponentModel
     in
@@ -102,7 +102,7 @@ updaterFromFrontend setter acc =
     }
 
 
-updateFromFrontend setters sendToApp builder sessionId clientId msgFromFrontend ( appModel, componentsModel ) =
+updateFromFrontend setters toApp builder sessionId clientId msgFromFrontend ( appModel, componentsModel ) =
     let
         gatherUpdates =
             NT.endFolder builder.updaterFromFrontend
@@ -115,7 +115,7 @@ updateFromFrontend setters sendToApp builder sessionId clientId msgFromFrontend 
                 setters
 
         ( newAppModel, appCmd ) =
-            appUpdate sendToApp sessionId clientId msgFromFrontend appModel
+            appUpdate toApp sessionId clientId msgFromFrontend appModel
     in
     ( ( newAppModel, componentsModel )
     , appCmd

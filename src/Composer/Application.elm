@@ -31,19 +31,19 @@ done builder =
         setters =
             NT.endSetters builder.setters
 
-        sendToApp msg =
+        toApp msg =
             ( Just msg, builder.emptyComponentsMsg )
     in
-    { init = init setters sendToApp builder
-    , update = Composer.update setters sendToApp builder
-    , view = Composer.view setters sendToApp builder
-    , subscriptions = Composer.subscriptions setters sendToApp builder
-    , onUrlRequest = \urlRequest -> builder.app.onUrlRequest urlRequest |> sendToApp
-    , onUrlChange = \url -> builder.app.onUrlChange url |> sendToApp
+    { init = init setters toApp builder
+    , update = Composer.update setters toApp builder
+    , view = Composer.view setters toApp builder
+    , subscriptions = Composer.subscriptions setters toApp builder
+    , onUrlRequest = \urlRequest -> builder.app.onUrlRequest urlRequest |> toApp
+    , onUrlChange = \url -> builder.app.onUrlChange url |> toApp
     }
 
 
-init setters sendToApp builder flags url key =
+init setters toApp builder flags url key =
     let
         initialise =
             NT.endFolder builder.initer
@@ -59,7 +59,7 @@ init setters sendToApp builder flags url key =
                 setters
 
         ( appModel, appCmd ) =
-            appInit sendToApp flags url key
+            appInit toApp flags url key
     in
     ( ( appModel, NT.endAppender componentsModel )
     , Cmd.batch (appCmd :: componentCmdsList)

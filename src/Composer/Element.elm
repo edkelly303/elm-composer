@@ -31,11 +31,11 @@ done builder =
         setters =
             NT.endSetters builder.setters
 
-        sendToApp msg =
+        toApp msg =
             ( Just msg, builder.emptyComponentsMsg )
     in
-    { init = Composer.init setters sendToApp builder
-    , update = Composer.update setters sendToApp builder
-    , view = Composer.view setters sendToApp builder
-    , subscriptions = Composer.subscriptions setters sendToApp builder
+    { init = Composer.init setters toApp builder
+    , update = Composer.update setters toApp builder
+    , view = Composer.view setters toApp builder
+    , subscriptions = Composer.subscriptions setters toApp builder
     }

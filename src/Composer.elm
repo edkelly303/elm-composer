@@ -8,18 +8,18 @@ initer componentInterface componentInit setter acc =
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
-        sendToApp msg =
+        toApp msg =
             ( Just msg, acc.emptyComponentsMsg )
 
         ( thisComponentModel, thisCmd ) =
             componentInit
-                sendToApp
+                toApp
                 sendToComponent
                 acc.flags
 
         interface =
             componentInterface
-                sendToApp
+                toApp
                 sendToComponent
                 thisComponentModel
     in
@@ -36,14 +36,14 @@ updater componentInterface componentUpdate setter maybeThisComponentMsg thisComp
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
-        sendToApp msg =
+        toApp msg =
             ( Just msg, acc.emptyComponentsMsg )
 
         ( newThisComponentModel, thisCmd ) =
             case maybeThisComponentMsg of
                 Just thisComponentMsg ->
                     componentUpdate
-                        sendToApp
+                        toApp
                         sendToComponent
                         thisComponentMsg
                         thisComponentModel
@@ -53,7 +53,7 @@ updater componentInterface componentUpdate setter maybeThisComponentMsg thisComp
 
         interface =
             componentInterface
-                sendToApp
+                toApp
                 sendToComponent
                 newThisComponentModel
 
@@ -72,12 +72,12 @@ viewer componentInterface setter thisComponentModel acc =
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
-        sendToApp msg =
+        toApp msg =
             ( Just msg, acc.emptyComponentsMsg )
 
         interface =
             componentInterface
-                sendToApp
+                toApp
                 sendToComponent
                 thisComponentModel
     in
@@ -91,18 +91,18 @@ subscriber componentInterface componentSubscriptions setter thisComponentModel a
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
-        sendToApp msg =
+        toApp msg =
             ( Just msg, acc.emptyComponentsMsg )
 
         interface =
             componentInterface
-                sendToApp
+                toApp
                 sendToComponent
                 thisComponentModel
 
         componentSubscriptions_ =
             componentSubscriptions
-                sendToApp
+                toApp
                 sendToComponent
                 thisComponentModel
     in
@@ -112,7 +112,7 @@ subscriber componentInterface componentSubscriptions setter thisComponentModel a
     }
 
 
-subscriptions setters sendToApp builder ( appModel, componentsModel ) =
+subscriptions setters toApp builder ( appModel, componentsModel ) =
     let
         gatherSubscriptions =
             NT.endFolder2 builder.subscriber
@@ -126,10 +126,10 @@ subscriptions setters sendToApp builder ( appModel, componentsModel ) =
                 setters
                 componentsModel
     in
-    Sub.batch (appSubscriptions sendToApp appModel :: componentSubscriptionsList)
+    Sub.batch (appSubscriptions toApp appModel :: componentSubscriptionsList)
 
 
-view setters sendToApp builder ( appModel, componentsModel ) =
+view setters toApp builder ( appModel, componentsModel ) =
     let
         gatherComponentViews =
             NT.endFolder2 builder.viewer
@@ -142,10 +142,10 @@ view setters sendToApp builder ( appModel, componentsModel ) =
                 setters
                 componentsModel
     in
-    appView sendToApp appModel
+    appView toApp appModel
 
 
-update setters sendToApp builder ( maybeAppMsg, componentsMsg ) ( appModel, componentsModel ) =
+update setters toApp builder ( maybeAppMsg, componentsMsg ) ( appModel, componentsModel ) =
     let
         gatherUpdates =
             NT.endFolder3 builder.updater
@@ -164,7 +164,7 @@ update setters sendToApp builder ( maybeAppMsg, componentsMsg ) ( appModel, comp
         ( newAppModel, appCmd ) =
             case maybeAppMsg of
                 Just appMsg ->
-                    appUpdate sendToApp appMsg appModel
+                    appUpdate toApp appMsg appModel
 
                 Nothing ->
                     ( appModel, Cmd.none )
@@ -174,7 +174,7 @@ update setters sendToApp builder ( maybeAppMsg, componentsMsg ) ( appModel, comp
     )
 
 
-init setters sendToApp builder flags =
+init setters toApp builder flags =
     let
         initialise =
             NT.endFolder builder.initer
@@ -190,7 +190,7 @@ init setters sendToApp builder flags =
                 setters
 
         ( appModel, appCmd ) =
-            appInit sendToApp flags
+            appInit toApp flags
     in
     ( ( appModel, NT.endAppender componentsModel )
     , Cmd.batch (appCmd :: componentCmdsList)

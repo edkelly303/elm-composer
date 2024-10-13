@@ -33,20 +33,20 @@ done builder =
         setters =
             NT.endSetters builder.setters
 
-        sendToApp msg =
+        toApp msg =
             ( Just msg, builder.emptyComponentsMsg )
     in
-    { init = init setters sendToApp builder
-    , update = Composer.update setters sendToApp builder
-    , updateFromBackend = updateFromBackend setters sendToApp builder
-    , view = Composer.view setters sendToApp builder
-    , subscriptions = Composer.subscriptions setters sendToApp builder
-    , onUrlRequest = \urlRequest -> builder.app.onUrlRequest urlRequest |> sendToApp
-    , onUrlChange = \url -> builder.app.onUrlChange url |> sendToApp
+    { init = init setters toApp builder
+    , update = Composer.update setters toApp builder
+    , updateFromBackend = updateFromBackend setters toApp builder
+    , view = Composer.view setters toApp builder
+    , subscriptions = Composer.subscriptions setters toApp builder
+    , onUrlRequest = \urlRequest -> builder.app.onUrlRequest urlRequest |> toApp
+    , onUrlChange = \url -> builder.app.onUrlChange url |> toApp
     }
 
 
-init setters sendToApp builder url key =
+init setters toApp builder url key =
     let
         initialise =
             NT.endFolder builder.initer
@@ -61,7 +61,7 @@ init setters sendToApp builder url key =
                 setters
 
         ( appModel, appCmd ) =
-            appInit sendToApp url key
+            appInit toApp url key
     in
     ( ( appModel, NT.endAppender componentsModel )
     , Cmd.batch (appCmd :: componentCmdsList)
@@ -73,17 +73,17 @@ initer componentInterface componentInit setter acc =
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
-        sendToApp msg =
+        toApp msg =
             ( Just msg, acc.emptyComponentsMsg )
 
         ( thisComponentModel, thisCmd ) =
             componentInit
-                sendToApp
+                toApp
                 sendToComponent
 
         interface =
             componentInterface
-                sendToApp
+                toApp
                 sendToComponent
                 thisComponentModel
     in
@@ -99,12 +99,12 @@ updaterFromBackend componentInterface setter thisComponentModel acc =
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
-        sendToApp msg =
+        toApp msg =
             ( Just msg, acc.emptyComponentsMsg )
 
         interface =
             componentInterface
-                sendToApp
+                toApp
                 sendToComponent
                 thisComponentModel
 
@@ -116,7 +116,7 @@ updaterFromBackend componentInterface setter thisComponentModel acc =
     }
 
 
-updateFromBackend setters sendToApp builder appMsg ( appModel, componentsModel ) =
+updateFromBackend setters toApp builder appMsg ( appModel, componentsModel ) =
     let
         gatherUpdates =
             NT.endFolder2 builder.updaterFromBackend
@@ -130,7 +130,7 @@ updateFromBackend setters sendToApp builder appMsg ( appModel, componentsModel )
                 componentsModel
 
         ( newAppModel, appCmd ) =
-            appUpdate sendToApp appMsg appModel
+            appUpdate toApp appMsg appModel
     in
     ( ( newAppModel, componentsModel )
     , appCmd
