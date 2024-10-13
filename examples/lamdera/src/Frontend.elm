@@ -121,7 +121,7 @@ view counter toSelf model =
             , Html.p []
                 [ Html.text
                     """
-                    And this counter is a component running in the backend. It 
+                    And this counter is a component running on the backend. It 
                     sends messages to the main backend app whenever its count 
                     changes, and the backend app broadcasts those messages to the 
                     frontend app. The frontend app then renders the counter and 
@@ -159,8 +159,9 @@ view counter toSelf model =
                     """
                     We can only see this "debug view" of the component's state 
                     because the author of the component has decided to make it 
-                    available to us as users. Our main frontend app doesn't have 
-                    direct access to the component's state.
+                    available to us via the component's interface. Our main 
+                    frontend app doesn't have direct access to the component's 
+                    state.
                     """
                 ]
             , Html.p []
