@@ -93,7 +93,7 @@ view counter sendToSelf model =
                     """
                 ]
             , Html.h2 [] [ Html.text "A counter component" ]
-            , counter.view.html
+            , counter.html
             , Html.p []
                 [ Html.text
                     """
@@ -153,7 +153,7 @@ view counter sendToSelf model =
                     Here is the state of the frontend counter component:
                     """
                 ]
-            , Html.pre [ Attr.style "font-size" "16px" ] [ Html.text counter.view.debug ]
+            , Html.pre [ Attr.style "font-size" "16px" ] [ Html.text counter.debug ]
             , Html.p []
                 [ Html.text
                     """

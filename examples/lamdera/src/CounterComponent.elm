@@ -10,7 +10,7 @@ import Types exposing (CounterComponentMsg(..))
 element { onUpdate } =
     { init = init
     , update = update onUpdate
-    , view = view
+    , interface = interface
     , subscriptions = subscriptions
     }
 
@@ -46,7 +46,7 @@ update onUpdate sendToApp sendToSelf msg model =
     )
 
 
-view sendToApp sendToSelf model =
+interface sendToApp sendToSelf model =
     { html =
         Counter.view model
             |> Html.map
