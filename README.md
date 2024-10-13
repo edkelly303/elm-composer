@@ -16,15 +16,18 @@ Compose Elm apps with typed message passing
 | Clear Errors                 | ✅          | 🤔          | 🙈                |
 
 
-## Elm Compose's solution
+## elm-composer's solution
 
 Writing a component is exactly like writing a normal `Browser.element`, except that:
 
-- Your `init`, `update`, `view` and `subscriptions` functions each take 2 extra arguments: `sendToApp` and `sendToSelf`.
-  - So for example, `view model` becomes `view sendToApp sendToSelf model`.
-  - Any messages that you want to send from `Html`, `Cmd` or `Sub` need to be wrapped in one or other of these `sendToX` functions.
-- Writing your main app is similar, except the number of additional arguments will vary depending on how many components you have added.
-  - So if you have one component, your `init` function will take 2 extra args, `sendToComponent` and `sendToSelf`. If you have two components, it will be `sendToComponent1`, `sendToComponent2` and `sendToSelf`
+- Your `init`, `update`, `view` and `subscriptions` functions each take 2 extra arguments: `toApp` and `toSelf`, and you rename your `view` function to `interface`.
+  - So for example, `view model` becomes `interface toApp toSelf model`.
+  - Any messages that you want to send from `Html`, `Cmd` or `Sub` need to be wrapped in one or other of these `toX` functions.
 
-- The exception is your main app's view function, which also takes a `viewComponent` argument for each component you've added.
-  - So `view model` becomes something like `view viewComponent1 sendToComponent1 viewComponent2 sendToComponent2 sendToSelf model`
+Writing your main app is similar, except the number of additional arguments  for 
+`init`, `update`, `view` and `subscriptions` will vary depending on the number of components you want to use:
+
+  - For each component you add, you also add a `nameOfComponent` argument.
+  - After the component arguments, you add a `toSelf` argument.
+  - So `view model` becomes something like `view myComponent1 myComponent2 toSelf model`.
+  - Any messages that you want your main app to send to itself need to be wrapped in `toSelf`.
