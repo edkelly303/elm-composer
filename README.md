@@ -30,10 +30,12 @@ main =
     |> Composer.run
 ```
 
-Writing a component is exactly like writing a normal `Browser.element`, except that:
+### Huh! But what's `component` in that example?
+
+A component is almost exactly like the record of `init`, `update`, `view` and `subscriptions` functions that you normally pass to `Browser.element`, except that:
 
 - Your `init`, `update`, `view` and `subscriptions` functions each take 2 extra arguments: `toApp` and `toSelf`.
-- You rename your `view` function to `interface`.
+- You rename the `view` function to `interface`.
 - For example:
   ```diff
   - view model = ...
@@ -62,15 +64,17 @@ Writing a component is exactly like writing a normal `Browser.element`, except t
   - Time.every 1000 (\now -> TimeUpdated now)
   + Time.every 1000 (\now -> toSelf (TimeUpdated now))`
   ```  
-- If you want your component to be able to send a message to your main app, you can do something like this:
+- If you want your component to send a message to your main app, you need to wrap it in `toApp`. The simplest way to send a message is probably something like this:
   ```elm
-  Task.perform toApp (Task.succeed MainAppMsg)
+  Task.perform (\() -> toApp MainAppMsg) (Task.succeed ())
   ```
 
-Writing your main app is similar, except the number of additional arguments for `init`, `update`, `view` and `subscriptions` will vary depending on the number of components you want to use:
+### Hmm, ok, and what's `app`?
 
-- For each component you add, you also add a `nameOfComponent` argument.
-- After the component arguments, you add a `toSelf` argument.
+You define your main app by defining the same record of functions that you would pass to a standard `Browser.element`, `Browser.document` or `Browser.application`, except:
+
+- For each component you want to integrate with your main app, you add a `nameOfComponent` argument to your main app's `init`, `update`, `view` and `subscriptions` functions.
+- After these component arguments, you also add a `toSelf` argument.
 - For example:
   ```diff
   - view model = ...
@@ -90,7 +94,7 @@ Writing your main app is similar, except the number of additional arguments for 
 
 ## `view` versus `interface`
 
-Why did we rename the component's `view` function to `interface`? I'm so glad you asked.
+Why did we rename the component's `view` function to `interface`? I'm so glad you asked!
 
 In the first component we write, we will probably do something like this:
 
