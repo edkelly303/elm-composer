@@ -6,16 +6,16 @@ Compose Elm apps with typed message passing
 
 ## The problem
 
-| Objective                                   | ☕ Flat TEA  | ☕ Nested TEA                            | 🎼 elm-composer |
-| ------------------------------------------- | ------------ | ---------------------------------------- | --------------- |
-| Component model is independent of app model | ❌           | ❌ app model contains component model    | ✅              |
-| Component msg is independent of app msg     | ❌           | ❌ component msg is wrapped in app msg   | ✅              |
-| Component handles its own initialisation    | ❌           | ❌ app calls component's init            | ✅              |
-| Component handles its own updates           | ❌           | ❌ app's update calls component's update | ✅              |
-| Component handles its own subscriptions     | ❌           | ❌ app's subs calls component's subs     | ✅              |
-| Component generates its own view            | ❌           | ❌ app's view calls component's view     | ✅ (optional)   |
-| Easy types                                  | ✅           | 🤔                                       | 🙈              |
-| Clear Errors                                | ✅           | 🤔                                       | 🤮              |
+| Objective                                   | ☕ Flat TEA  | ☕ Nested TEA                                          | 🎼 elm-composer |
+| ------------------------------------------- | ------------ | ------------------------------------------------------ | --------------- |
+| Component model is independent of app model | ❌           | ❌ app model contains component model                  | ✅              |
+| Component msg is independent of app msg     | ❌           | ❌ component msg is wrapped in app msg                 | ✅              |
+| Component handles its own initialisation    | ❌           | ❌ app calls component's init                          | ✅              |
+| Component handles its own updates           | ❌           | ❌ app's update calls component's update               | ✅              |
+| Component handles its own subscriptions     | ❌           | ❌ app's subscriptions calls component's subscriptions | ✅              |
+| Component generates its own view            | ❌           | ❌ app's view calls component's view                   | ✅ (optional)   |
+| Easy types                                  | ✅           | 🤔                                                     | 🙈              |
+| Clear Errors                                | ✅           | 🤔                                                     | 🤮              |
 
 
 ## elm-composer's solution
