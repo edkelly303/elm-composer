@@ -20,6 +20,17 @@ Compose Elm apps with typed message passing
 
 ## elm-composer's solution
 
+```elm
+import Browser
+import Composer.Element as Composer
+
+main =
+  Composer.defineApp app
+    |> Composer.addComponent component
+    |> Composer.done
+    |> Browser.element
+```
+
 Writing a component is exactly like writing a normal `Browser.element`, except that:
 
 - Your `init`, `update`, `view` and `subscriptions` functions each take 2 extra arguments: `toApp` and `toSelf`.
