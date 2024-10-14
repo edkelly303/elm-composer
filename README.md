@@ -6,14 +6,16 @@ Compose Elm apps with typed message passing
 
 ## The problem
 
-| Objective                    | Flat TEA   | Nested TEA | Elm Composed TEA |
-| ---------------------------- | ---------- | ---------- | ---------------- |
-| Encapsulation                | ❌          | ✅          | ✅                |
-| Parent msgs to/from child    | ❌ Pick one | ❌ Pick one | ✅ Both           |
-| Child msgs to/from parent    | ❌ Pick one | ❌ Pick one | ✅ Both           |
-| View msgs to child or parent | ❌ Pick one | ❌ Pick one | ✅ Both           |
-| Easy types                   | ✅          | 🤔          | 🙈                |
-| Clear Errors                 | ✅          | 🤔          | 🙈                |
+| Objective                                   | ☕ Flat TEA  | ☕ Nested TEA | 🎼 elm-composer |
+| ------------------------------------------- | ------------ | ------------ | --------------- |
+| Component model is independent of app model | ❌           | ❌            | ✅              |
+| Component msg is independent of app msg     | ❌           | ❌            | ✅              |
+| Component handles its own initialisation    | ❌           | ❌            | ✅              |
+| Component handles its own updates           | ❌           | ❌            | ✅              |
+| Component handles its own subscriptions     | ❌           | ❌            | ✅              |
+| Component generates its own view            | ❌           | ❌            | ✅ optional     |
+| Easy types                                  | ✅           | 🤔            | 🙈              |
+| Clear Errors                                | ✅           | 🤔            | 🤮              |
 
 
 ## elm-composer's solution
