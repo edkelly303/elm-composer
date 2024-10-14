@@ -1,6 +1,7 @@
-module Composer.Document exposing (..)
+module Composer.Document exposing (addComponent, defineApp, done, run)
 
 import Composer.Element
+import Browser
 
 
 defineApp =
@@ -13,3 +14,8 @@ addComponent =
 
 done =
     Composer.Element.done
+
+run builder =
+    builder
+        |> done
+        |> Browser.document

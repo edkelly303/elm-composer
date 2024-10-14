@@ -27,8 +27,7 @@ import Composer.Element as Composer
 main =
   Composer.defineApp app
     |> Composer.addComponent component
-    |> Composer.done
-    |> Browser.element
+    |> Composer.run
 ```
 
 Writing a component is exactly like writing a normal `Browser.element`, except that:

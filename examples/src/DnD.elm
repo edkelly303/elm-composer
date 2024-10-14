@@ -20,17 +20,13 @@ main :
         ( AppModel, ( DnDModel, () ) )
         ( Maybe AppMsg, ( Maybe DnDMsg, () ) )
 main =
-    Browser.element program
-
-
-program =
     Composer.Element.defineApp app
         |> Composer.Element.addComponent
             (dndList
                 { items = fruits
                 }
             )
-        |> Composer.Element.done
+        |> Composer.Element.run
 
 
 type alias AppModel =

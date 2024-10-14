@@ -1,5 +1,6 @@
-module Composer.Application exposing (addComponent, defineApp, done)
+module Composer.Application exposing (addComponent, defineApp, done, run)
 
+import Browser
 import Composer
 import NestedTuple as NT
 
@@ -41,6 +42,12 @@ done builder =
     , onUrlRequest = \urlRequest -> builder.app.onUrlRequest urlRequest |> toApp
     , onUrlChange = \url -> builder.app.onUrlChange url |> toApp
     }
+
+
+run builder =
+    builder
+        |> done
+        |> Browser.application
 
 
 init setters toApp builder flags url key =

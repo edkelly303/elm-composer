@@ -23,8 +23,7 @@ main =
                 , timerReset = TimerReset
                 }
             )
-        |> Composer.Element.done
-        |> Browser.element
+        |> Composer.Element.run
 
 
 type alias AppModel =

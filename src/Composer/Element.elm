@@ -1,5 +1,6 @@
-module Composer.Element exposing (..)
+module Composer.Element exposing (addComponent, defineApp, done, run)
 
+import Browser
 import Composer
 import NestedTuple as NT
 
@@ -39,3 +40,9 @@ done builder =
     , view = Composer.view setters toApp builder
     , subscriptions = Composer.subscriptions setters toApp builder
     }
+
+
+run builder =
+    builder
+        |> done
+        |> Browser.element
