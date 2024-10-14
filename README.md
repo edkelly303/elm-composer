@@ -34,27 +34,58 @@ main =
 Writing a component is exactly like writing a normal `Browser.element`, except that:
 
 - Your `init`, `update`, `view` and `subscriptions` functions each take 2 extra arguments: `toApp` and `toSelf`.
-- You rename your `view` function to `interface`. For example:
-  - `init flags` ➡️ `init toApp toSelf flags`
-  - `update msg model` ➡️ `update toApp toSelf msg model`
-  - `view model` ➡️ `interface toApp toSelf model`
-  - `subscriptions model` ➡️ `subscriptions toApp toSelf model`
-- Any messages that you want your component to send itself need to be wrapped in `toSelf`:
-  - Html: `Html.Events.onClick Increment` ➡️ `Html.Events.onClick (toSelf Increment)`
-  - Cmd: `Task.perform (\now -> TimeUpdated now) Time.now` ➡️ `Task.perform (\now -> toSelf (TimeUpdated now)) Time.now`
-  - Sub: `Time.every 1000 (\now -> TimeUpdated now)` ➡️ `Time.every 1000 (\now -> toSelf (TimeUpdated now))`
-- If you want your component to be able to send a message to your main app, you can do something like this:
-  - `Task.perform toApp (Task.succeed ExampleAppMsg)`
+- You rename your `view` function to `interface`.
+- For example:
+  ```diff
+  - view model = ...
+  + interface toApp toSelf model = ...
+  
+  - init flags = ...
+  + init toApp toSelf flags = ...
 
-Writing your main app is similar, except the number of additional arguments  for 
-`init`, `update`, `view` and `subscriptions` will vary depending on the number of components you want to use:
+  - update msg model = ...
+  + update toApp toSelf msg model = ...
+
+  - subscriptions model = ...
+  + subscriptions toApp toSelf model = ...
+  ```
+- Any messages that you want your component to send itself need to be wrapped in `toSelf`:
+  ```diff
+  Html
+  - Html.Events.onClick Increment
+  + Html.Events.onClick (toSelf Increment)
+
+  Cmd
+  - Task.perform (\now -> TimeUpdated now) Time.now
+  + Task.perform (\now -> toSelf (TimeUpdated now)) Time.now
+
+  Sub
+  - Time.every 1000 (\now -> TimeUpdated now)
+  + Time.every 1000 (\now -> toSelf (TimeUpdated now))`
+  ```  
+- If you want your component to be able to send a message to your main app, you can do something like this:
+  ```elm
+  Task.perform toApp (Task.succeed MainAppMsg)
+  ```
+
+Writing your main app is similar, except the number of additional arguments for `init`, `update`, `view` and `subscriptions` will vary depending on the number of components you want to use:
 
 - For each component you add, you also add a `nameOfComponent` argument.
-- After the component arguments, you add a `toSelf` argument. For example:
-  - `init flags` ➡️ `init myFirstComponent mySecondComponent toSelf flags`
-  - `update msg model` ➡️ `update myFirstComponent mySecondComponent toSelf msg model`
-  - `view model` ➡️ `view myFirstComponent mySecondComponent toSelf model`
-  - `subscriptions model` ➡️ `subscriptions myFirstComponent mySecondComponent toSelf model`
+- After the component arguments, you add a `toSelf` argument.
+- For example:
+  ```diff
+  - view model = ...
+  + view myFirstComponent mySecondComponent toSelf model = ...
+    
+  - init flags = ...
+  + init myFirstComponent mySecondComponent toSelf flags = ...
+
+  - update msg model = ...
+  + update myFirstComponent mySecondComponent toSelf msg model = ...
+
+  - subscriptions model = ...
+  + subscriptions myFirstComponent mySecondComponent toSelf model = ...
+  ```
 - Any messages that you want your main app to send itself need to be wrapped in `toSelf` (as above).
 
 
