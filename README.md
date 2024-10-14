@@ -9,7 +9,7 @@ Compose Elm apps with typed message passing
 | Objective                                   | ☕ Flat TEA  | ☕ Nested TEA                            | 🎼 elm-composer |
 | ------------------------------------------- | ------------ | ---------------------------------------- | --------------- |
 | Component model is independent of app model | ❌           | ❌ app model contains component model    | ✅              |
-| Component msg is independent of app msg     | ❌           | ❌ app msg contains component msg        | ✅              |
+| Component msg is independent of app msg     | ❌           | ❌ component msg is wrapped in app msg   | ✅              |
 | Component handles its own initialisation    | ❌           | ❌ app calls component's init            | ✅              |
 | Component handles its own updates           | ❌           | ❌ app's update calls component's update | ✅              |
 | Component handles its own subscriptions     | ❌           | ❌ app's subs calls component's subs     | ✅              |
