@@ -31,7 +31,7 @@ Writing a component is exactly like writing a normal `Browser.element`, except t
 - Any messages that you want your component to send itself need to be wrapped in `toSelf`:
   - Html: `Html.Events.onClick Increment` ➡️ `Html.Events.onClick (toSelf Increment)`
   - Cmd: `Task.perform (\now -> TimeUpdated now) Time.now` ➡️ `Task.perform (\now -> toSelf (TimeUpdated now)) Time.now`
-  - Sub: `Time.every 1000 (now -> TimeUpdated now)` ➡️ `Time.every 1000 (now -> toSelf (TimeUpdated now))`
+  - Sub: `Time.every 1000 (\now -> TimeUpdated now)` ➡️ `Time.every 1000 (\now -> toSelf (TimeUpdated now))`
 
 Writing your main app is similar, except the number of additional arguments  for 
 `init`, `update`, `view` and `subscriptions` will vary depending on the number of components you want to use:
