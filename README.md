@@ -52,6 +52,15 @@ Why did we rename the component's `view` function to `interface`? I'm so glad yo
 In the first component we write, we will probably do something like this:
 
 ```elm
+type alias ComponentModel =
+  { count : Int
+  , ... other fields
+  }
+
+type ComponentMsg
+  = Increment
+  | ... other variants
+
 component =
   { init = ...
   , update = ...
