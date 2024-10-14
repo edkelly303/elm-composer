@@ -114,7 +114,9 @@ component =
   , subscriptions = ...
   , interface =
     \toApp toSelf model ->
-      Html.button [ Html.Events.onClick (toSelf Increment) ] [ Html.text (String.fromInt model.count) ]
+      Html.button
+        [ Html.Events.onClick (toSelf Increment) ]
+        [ Html.text (String.fromInt model.count) ]
   }
 ```
 
@@ -166,7 +168,9 @@ app =
     \component toSelf model ->
       Html.div []
         [ Html.text "Behold my wondrous component which I have rendered myself!"
-        , Html.button [ Html.Events.onClick component.increment ] [ Html.text (String.fromInt component.count) ]
+        , Html.button
+          [ Html.Events.onClick component.increment ]
+          [ Html.text (String.fromInt component.count) ]
         ] 
   }
 ```
