@@ -39,7 +39,7 @@ type alias AppMsg =
 
 
 app =
-    { init = \sendToDnD toSelf flags -> ( (), Cmd.none )
+    { init = \dnd toSelf flags -> ( (), Cmd.none )
     , update =
         \dnd toSelf msg model ->
             ( (), Cmd.none )
@@ -51,7 +51,7 @@ app =
                 , Html.p [] [ Html.text "This is a `Debug.toString` of the list of items:" ]
                 , Html.text (Debug.toString dnd.items)
                 ]
-    , subscriptions = \sendToDnD toSelf model -> Sub.none
+    , subscriptions = \dnd toSelf model -> Sub.none
     }
 
 
