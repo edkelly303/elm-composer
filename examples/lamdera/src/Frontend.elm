@@ -68,7 +68,7 @@ update counter toSelf msg model =
             , Cmd.none
             )
 
-        BackendCounterClicked counterMsg ->
+        BackendCounterComponentClicked counterMsg ->
             ( model, Lamdera.sendToBackend (BackendCounterComponentUpdateRequested counterMsg) )
 
         Noop ->
@@ -87,7 +87,7 @@ subscriptions counter toSelf model =
     Sub.none
 
 
-view counter toSelf model =
+view frontendCounterComponent toSelf model =
     { title = "`elm-composer` in Lamdera"
     , body =
         [ Html.header [ Attr.style "text-align" "center" ]
@@ -108,9 +108,9 @@ view counter toSelf model =
                 ]
             , Html.h2 [] [ Html.text "A counter component" ]
             , Counter.view
-                counter.increment
-                counter.decrement
-                counter.count
+                frontendCounterComponent.increment
+                frontendCounterComponent.decrement
+                frontendCounterComponent.count
             , Html.p []
                 [ Html.text
                     """
@@ -122,8 +122,8 @@ view counter toSelf model =
                 ]
             , Html.h2 [] [ Html.text "A counter component running on the backend" ]
             , Counter.view
-                (toSelf (BackendCounterClicked Increment))
-                (toSelf (BackendCounterClicked Decrement))
+                (toSelf (BackendCounterComponentClicked Increment))
+                (toSelf (BackendCounterComponentClicked Decrement))
                 model.backendCounterComponent
             , Html.p []
                 [ Html.text
@@ -160,7 +160,7 @@ view counter toSelf model =
                     Here is the state of the frontend counter component:
                     """
                 ]
-            , Html.pre [ Attr.style "font-size" "16px" ] [ Html.text counter.debug ]
+            , Html.pre [ Attr.style "font-size" "16px" ] [ Html.text frontendCounterComponent.debug ]
             , Html.p []
                 [ Html.text
                     """

@@ -24,7 +24,7 @@ type FAppMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
     | FrontendCounterClicked CounterMsg
-    | BackendCounterClicked CounterMsg
+    | BackendCounterComponentClicked CounterMsg
     | Noop
 
 
