@@ -116,8 +116,8 @@ view counter toSelf model =
                     """
                     This counter is a component running in the frontend, completely 
                     independent of the main frontend app. It manages its own state 
-                    and provides its own view, which is passed into the main 
-                    frontend app's view for rendering.
+                    and provides an interface that gives the frontend app the 
+                    information necessary to render it.
                     """
                 ]
             , Html.h2 [] [ Html.text "A counter component running on the backend" ]
