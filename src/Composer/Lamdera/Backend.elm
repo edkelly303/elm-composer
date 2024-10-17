@@ -21,7 +21,7 @@ addComponent component builder =
     , setters = NT.setter builder.setters
     , initer = NT.folder (initer component.interface component.init) builder.initer
     , updater = NT.folder3 (Composer.updater component.interface component.update) builder.updater
-    , updaterFromFrontend = NT.folder updaterFromFrontend builder.updaterFromFrontend
+    , updaterFromFrontend = NT.folder2 (updaterFromFrontend component.interface) builder.updaterFromFrontend
     , subscriber = NT.folder2 (Composer.subscriber component.interface component.subscriptions) builder.subscriber
     }
 
@@ -89,15 +89,21 @@ initer componentInterface componentInit setter acc =
     }
 
 
-updaterFromFrontend setter acc =
+updaterFromFrontend componentInterface setter thisComponentModel acc =
     let
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
-        appUpdate =
-            acc.appUpdate sendToComponent
+        toApp msg =
+            ( Just msg, acc.emptyComponentsMsg )
+
+        interface =
+            componentInterface
+                toApp
+                sendToComponent
+                thisComponentModel
     in
-    { appUpdate = appUpdate
+    { appUpdate = acc.appUpdate interface
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
 
@@ -105,7 +111,7 @@ updaterFromFrontend setter acc =
 updateFromFrontend setters toApp builder sessionId clientId msgFromFrontend ( appModel, componentsModel ) =
     let
         gatherUpdates =
-            NT.endFolder builder.updaterFromFrontend
+            NT.endFolder2 builder.updaterFromFrontend
 
         { appUpdate } =
             gatherUpdates
@@ -113,6 +119,7 @@ updateFromFrontend setters toApp builder sessionId clientId msgFromFrontend ( ap
                 , emptyComponentsMsg = builder.emptyComponentsMsg
                 }
                 setters
+                componentsModel
 
         ( newAppModel, appCmd ) =
             appUpdate toApp sessionId clientId msgFromFrontend appModel

@@ -1,7 +1,7 @@
 module Backend exposing (..)
 
 import Composer.Lamdera.Backend as Composer
-import CounterComponent
+import Counter
 import Html
 import Lamdera exposing (ClientId, SessionId)
 import Process
@@ -20,7 +20,7 @@ composition =
         , updateFromFrontend = updateFromFrontend
         , subscriptions = \counter toSelf model -> Sub.none
         }
-        |> Composer.addComponent (CounterComponent.element { onUpdate = Just BackendCounterComponentUpdated })
+        |> Composer.addComponent (Counter.component { countChanged = BackendCounterComponentUpdated })
         |> Composer.done
 
 
@@ -41,7 +41,16 @@ update counter toSelf msg model =
 updateFromFrontend counter toSelf sessionId clientId msg model =
     case msg of
         BackendCounterComponentUpdateRequested counterMsg ->
-            ( model, Task.perform counter (Task.succeed counterMsg) )
+            ( model
+            , case counterMsg of
+                Increment ->
+                    Task.perform identity (Task.succeed counter.increment)
+
+                Decrement ->
+                    Task.perform identity (Task.succeed counter.decrement)
+            )
 
         BackendCounterComponentStatusRequested ->
-            ( model, Task.perform counter (Task.succeed CounterComponentStatusRequested) )
+            ( model
+            , Task.perform toSelf (Task.succeed (BackendCounterComponentUpdated counter.count))
+            )

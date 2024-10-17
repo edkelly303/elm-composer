@@ -4,7 +4,6 @@ import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import Composer.Lamdera.Frontend as Composer
 import Counter
-import CounterComponent
 import Html
 import Html.Attributes as Attr
 import Lamdera
@@ -26,7 +25,7 @@ composition =
         , subscriptions = subscriptions
         , view = view
         }
-        |> Composer.addComponent (CounterComponent.element { onUpdate = Nothing })
+        |> Composer.addComponent (Counter.component { countChanged = \_ -> Noop })
         |> Composer.done
 
 
@@ -57,10 +56,23 @@ update counter toSelf msg model =
             ( model, Cmd.none )
 
         FrontendCounterClicked counterMsg ->
-            ( { model | frontendCounter = Counter.update counterMsg model.frontendCounter }, Cmd.none )
+            ( { model
+                | frontendCounter =
+                    case counterMsg of
+                        Increment ->
+                            model.frontendCounter + 1
+
+                        Decrement ->
+                            model.frontendCounter - 1
+              }
+            , Cmd.none
+            )
 
         BackendCounterClicked counterMsg ->
             ( model, Lamdera.sendToBackend (BackendCounterComponentUpdateRequested counterMsg) )
+
+        Noop ->
+            ( model, Cmd.none )
 
 
 updateFromBackend counter toSelf msg model =
@@ -82,8 +94,10 @@ view counter toSelf model =
             [ Html.h1 [] [ Html.text "Counter Components Demo" ] ]
         , Html.main_ [ Attr.style "padding" "20px" ]
             [ Html.h2 [] [ Html.text "A simple counter" ]
-            , Counter.view model.frontendCounter
-                |> Html.map (\counterMsg -> toSelf (FrontendCounterClicked counterMsg))
+            , Counter.view
+                (toSelf (FrontendCounterClicked Increment))
+                (toSelf (FrontendCounterClicked Decrement))
+                model.frontendCounter
             , Html.p []
                 [ Html.text
                     """
@@ -93,7 +107,10 @@ view counter toSelf model =
                     """
                 ]
             , Html.h2 [] [ Html.text "A counter component" ]
-            , counter.html
+            , Counter.view
+                counter.increment
+                counter.decrement
+                counter.count
             , Html.p []
                 [ Html.text
                     """
@@ -104,20 +121,10 @@ view counter toSelf model =
                     """
                 ]
             , Html.h2 [] [ Html.text "A counter component running on the backend" ]
-            , Counter.view model.backendCounterComponent
-                |> Html.map
-                    (\counterMsg ->
-                        toSelf
-                            (BackendCounterClicked
-                                (case counterMsg of
-                                    Increment ->
-                                        CounterComponentIncremented
-
-                                    Decrement ->
-                                        CounterComponentDecremented
-                                )
-                            )
-                    )
+            , Counter.view
+                (toSelf (BackendCounterClicked Increment))
+                (toSelf (BackendCounterClicked Decrement))
+                model.backendCounterComponent
             , Html.p []
                 [ Html.text
                     """

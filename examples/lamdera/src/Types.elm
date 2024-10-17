@@ -17,18 +17,19 @@ type alias FAppModel =
 
 
 type alias FrontendMsg =
-    ( Maybe FAppMsg, ( Maybe CounterComponentMsg, () ) )
+    ( Maybe FAppMsg, ( Maybe CounterMsg, () ) )
 
 
 type FAppMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
     | FrontendCounterClicked CounterMsg
-    | BackendCounterClicked CounterComponentMsg
+    | BackendCounterClicked CounterMsg
+    | Noop
 
 
 type ToBackend
-    = BackendCounterComponentUpdateRequested CounterComponentMsg
+    = BackendCounterComponentUpdateRequested CounterMsg
     | BackendCounterComponentStatusRequested
 
 
@@ -41,7 +42,7 @@ type alias BAppModel =
 
 
 type alias BackendMsg =
-    ( Maybe BAppMsg, ( Maybe CounterComponentMsg, () ) )
+    ( Maybe BAppMsg, ( Maybe CounterMsg, () ) )
 
 
 type BAppMsg
@@ -59,9 +60,3 @@ type alias CounterModel =
 type CounterMsg
     = Increment
     | Decrement
-
-
-type CounterComponentMsg
-    = CounterComponentStatusRequested
-    | CounterComponentIncremented
-    | CounterComponentDecremented
