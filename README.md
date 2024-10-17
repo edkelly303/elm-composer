@@ -21,7 +21,6 @@ Compose Elm apps with typed message passing
 ## elm-composer's solution
 
 ```elm
-import Browser
 import Composer.Element as Composer
 
 main =
