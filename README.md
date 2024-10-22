@@ -177,3 +177,33 @@ app =
 The neat thing about this is that it lets us enforce as much or as little encapsulation of our components as we please. 
 - The main app cannot directly see what is in the component's model, unless our `interface` function returns that model.
 - The main app cannot send messages to the component, unless our `interface` function returns the component's `toSelf` message constructor, or provides specific message variants for the main app to send.
+
+## Couldn't we make it a bit more complicated?
+
+My friend, we are programmers - we can always make things more complicated.
+
+So far, we've got a component that can provide an interface that controls how our main app can interact with it.
+
+But what if we also want the converse: an interface that controls how our component can interact with our main app's model, and specifies what messages it can send to the main app?
+
+This is where `Composer.addComponentWithRequirements` comes in.
+
+Under the covers, when we call the simole baby version of `Composer.addComponent`, what's really happening is this:
+
+```diff
+import Composer.Element as Composer
+
+main =
+  Composer.defineApp app
+-    |> Composer.addComponent
++    |> Composer.addComponentWithRequirements
+        component
++        (\toApp appModel -> toApp)
+    |> Composer.run
+```
+
+As you can see, there's now an extra function passed to each component that specifies the interface that the main app provides to the component. In this case, we simply return the `toApp` message constructor, and that's why we end up with the `toApp` argument being passed to our component's update, view and subscriptions functions.
+
+Now, just as with the `interface` function we defined earlier in our component, this new app interface function can return any type we like. Instead of returning the `toApp` constructor, we might prefer to only expose a limited subset of the variants of the main app's `msg` type, or we might expose a subset of fields from the main app's `model`.
+
+To see how this might work in practice, check out the `DnD` example in the examples folder.
