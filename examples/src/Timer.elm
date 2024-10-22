@@ -16,11 +16,12 @@ main :
         ( AppModel, ( TimerModel, () ) )
         ( Maybe AppMsg, ( Maybe TimerMsg, () ) )
 main =
-    Composer.Element.defineApp app
-        |> Composer.Element.addComponent
-            (timerComponent
-                { timerExpired = TimerExpired
-                , timerReset = TimerReset
+    Composer.Element.defineApp app_
+        |> Composer.Element.addComponentWithRequirements
+            timerComponent
+            (\toApp appModel ->
+                { timerExpired = toApp TimerExpired
+                , timerReset = toApp TimerReset
                 }
             )
         |> Composer.Element.run
@@ -35,9 +36,9 @@ type AppMsg
     | TimerReset
 
 
-app =
+app_ =
     { init =
-        \sendToTimer toSelf flags ->
+        \toSelf flags ->
             ( { timerExpired = False }, Cmd.none )
     , update =
         \timer toSelf msg model ->
@@ -119,27 +120,27 @@ type alias TimerModel =
     Maybe Int
 
 
-timerComponent { timerExpired, timerReset } =
+timerComponent =
     { init =
         \toApp toSelf flags ->
             ( Nothing, Cmd.none )
     , update =
-        \toApp toSelf msg model ->
+        \app toSelf msg model ->
             case msg of
                 Start ->
                     ( Just 10, Cmd.none )
 
                 Tick ->
                     if model == Just 0 then
-                        ( Just 0, send toApp timerExpired )
+                        ( Just 0, send app.timerExpired )
 
                     else
                         ( Maybe.map (\n -> n - 1) model, Cmd.none )
 
                 Reset ->
-                    ( Nothing, send toApp timerReset )
+                    ( Nothing, send app.timerReset )
     , interface =
-        \toApp toSelf model ->
+        \app toSelf model ->
             { reset = toSelf Reset
             , view =
                 Html.article
@@ -162,7 +163,7 @@ timerComponent { timerExpired, timerReset } =
                     ]
             }
     , subscriptions =
-        \toApp toSelf model ->
+        \app toSelf model ->
             case model of
                 Nothing ->
                     Sub.none
@@ -172,5 +173,5 @@ timerComponent { timerExpired, timerReset } =
     }
 
 
-send toX msg =
-    Task.perform toX (Task.succeed msg)
+send msg =
+    Task.perform identity (Task.succeed msg)

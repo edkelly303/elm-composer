@@ -3,9 +3,9 @@ module Composer exposing (..)
 import NestedTuple as NT
 
 
-initer componentInterface componentInit setter acc =
+initer componentInit setter acc =
     let
-        sendToComponent msg =
+        toComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
         toApp msg =
@@ -14,26 +14,19 @@ initer componentInterface componentInit setter acc =
         ( thisComponentModel, thisCmd ) =
             componentInit
                 toApp
-                sendToComponent
+                toComponent
                 acc.flags
-
-        interface =
-            componentInterface
-                toApp
-                sendToComponent
-                thisComponentModel
     in
     { componentsModel = NT.appender thisComponentModel acc.componentsModel
-    , appInit = acc.appInit interface
     , componentCmdsList = thisCmd :: acc.componentCmdsList
     , flags = acc.flags
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
 
 
-updater componentInterface componentUpdate setter maybeThisComponentMsg thisComponentModel acc =
+updater makeAppInterface makeComponentInterface componentUpdate setter maybeThisComponentMsg thisComponentModel acc =
     let
-        sendToComponent msg =
+        toComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
         toApp msg =
@@ -43,31 +36,28 @@ updater componentInterface componentUpdate setter maybeThisComponentMsg thisComp
             case maybeThisComponentMsg of
                 Just thisComponentMsg ->
                     componentUpdate
-                        toApp
-                        sendToComponent
+                        (makeAppInterface toApp acc.appModel)
+                        toComponent
                         thisComponentMsg
                         thisComponentModel
 
                 Nothing ->
                     ( thisComponentModel, Cmd.none )
 
-        interface =
-            componentInterface
-                toApp
-                sendToComponent
+        componentInterface =
+            makeComponentInterface
+                (makeAppInterface toApp acc.appModel)
+                toComponent
                 newThisComponentModel
-
-        appUpdate =
-            acc.appUpdate interface
     in
-    { appUpdate = appUpdate
+    { appUpdate = acc.appUpdate componentInterface
     , componentCmdsList = thisCmd :: acc.componentCmdsList
     , newComponentsModel = NT.appender newThisComponentModel acc.newComponentsModel
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
 
 
-viewer componentInterface setter thisComponentModel acc =
+viewer makeAppInterface makeComponentInterface setter thisComponentModel acc =
     let
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
@@ -75,18 +65,18 @@ viewer componentInterface setter thisComponentModel acc =
         toApp msg =
             ( Just msg, acc.emptyComponentsMsg )
 
-        interface =
-            componentInterface
-                toApp
+        componentInterface =
+            makeComponentInterface
+                (makeAppInterface toApp acc.appModel)
                 sendToComponent
                 thisComponentModel
     in
-    { appView = acc.appView interface
+    { appView = acc.appView componentInterface
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
 
 
-subscriber componentInterface componentSubscriptions setter thisComponentModel acc =
+subscriber makeAppInterface makeComponentInterface componentSubscriptions setter thisComponentModel acc =
     let
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
@@ -94,19 +84,19 @@ subscriber componentInterface componentSubscriptions setter thisComponentModel a
         toApp msg =
             ( Just msg, acc.emptyComponentsMsg )
 
-        interface =
-            componentInterface
-                toApp
+        componentInterface =
+            makeComponentInterface
+                (makeAppInterface toApp acc.appModel)
                 sendToComponent
                 thisComponentModel
 
         componentSubscriptions_ =
             componentSubscriptions
-                toApp
+                (makeAppInterface toApp acc.appModel)
                 sendToComponent
                 thisComponentModel
     in
-    { appSubscriptions = acc.appSubscriptions interface
+    { appSubscriptions = acc.appSubscriptions componentInterface
     , componentSubscriptionsList = componentSubscriptions_ :: acc.componentSubscriptionsList
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
@@ -120,6 +110,7 @@ subscriptions setters toApp builder ( appModel, componentsModel ) =
         { appSubscriptions, componentSubscriptionsList } =
             gatherSubscriptions
                 { appSubscriptions = builder.app.subscriptions
+                , appModel = appModel
                 , componentSubscriptionsList = []
                 , emptyComponentsMsg = builder.emptyComponentsMsg
                 }
@@ -137,6 +128,7 @@ view setters toApp builder ( appModel, componentsModel ) =
         { appView } =
             gatherComponentViews
                 { appView = builder.app.view
+                , appModel = appModel
                 , emptyComponentsMsg = builder.emptyComponentsMsg
                 }
                 setters
@@ -153,6 +145,7 @@ update setters toApp builder ( maybeAppMsg, componentsMsg ) ( appModel, componen
         { appUpdate, componentCmdsList, newComponentsModel } =
             gatherUpdates
                 { appUpdate = builder.app.update
+                , appModel = appModel
                 , componentCmdsList = []
                 , newComponentsModel = NT.define
                 , emptyComponentsMsg = builder.emptyComponentsMsg
@@ -179,18 +172,17 @@ init setters toApp builder flags =
         initialise =
             NT.endFolder builder.initer
 
-        { appInit, componentCmdsList, componentsModel } =
+        ( appModel, appCmd ) =
+            builder.app.init toApp flags
+
+        { componentCmdsList, componentsModel } =
             initialise
                 { emptyComponentsMsg = builder.emptyComponentsMsg
                 , flags = flags
-                , appInit = builder.app.init
                 , componentCmdsList = []
                 , componentsModel = NT.define
                 }
                 setters
-
-        ( appModel, appCmd ) =
-            appInit toApp flags
     in
     ( ( appModel, NT.endAppender componentsModel )
     , Cmd.batch (appCmd :: componentCmdsList)

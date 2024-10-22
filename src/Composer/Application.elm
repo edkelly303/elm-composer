@@ -20,7 +20,7 @@ addComponent component builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters
-    , initer = NT.folder (Composer.initer component.interface component.init) builder.initer
+    , initer = NT.folder (Composer.initer component.init) builder.initer
     , updater = NT.folder3 (Composer.updater component.interface component.update) builder.updater
     , viewer = NT.folder2 (Composer.viewer component.interface) builder.viewer
     , subscriber = NT.folder2 (Composer.subscriber component.interface component.subscriptions) builder.subscriber
@@ -55,18 +55,17 @@ init setters toApp builder flags url key =
         initialise =
             NT.endFolder builder.initer
 
-        { appInit, componentCmdsList, componentsModel } =
+        { componentCmdsList, componentsModel } =
             initialise
                 { emptyComponentsMsg = builder.emptyComponentsMsg
                 , flags = flags
-                , appInit = builder.app.init
                 , componentCmdsList = []
                 , componentsModel = NT.define
                 }
                 setters
 
         ( appModel, appCmd ) =
-            appInit toApp flags url key
+            builder.app.init toApp flags url key
     in
     ( ( appModel, NT.endAppender componentsModel )
     , Cmd.batch (appCmd :: componentCmdsList)
