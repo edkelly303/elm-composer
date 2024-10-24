@@ -1,6 +1,12 @@
-module Composer.Element exposing (addComponent, defineApp, done, run, addComponentWithRequirements)
+module Composer.Element exposing
+    ( addComponent
+    , addComponentWithRequirements
+    , defineApp
+    , done
 
-import Browser
+    )
+
+
 import Composer
 import NestedTuple as NT
 
@@ -31,7 +37,7 @@ addComponentWithRequirements component appInterface builder =
     }
 
 
-done builder =
+done ctor builder =
     let
         setters =
             NT.endSetters builder.setters
@@ -40,13 +46,9 @@ done builder =
             ( Just msg, builder.emptyComponentsMsg )
     in
     { init = Composer.init setters toApp builder
-    , update = Composer.update setters toApp builder
-    , view = Composer.view setters toApp builder
-    , subscriptions = Composer.subscriptions setters toApp builder
+    , update = Composer.update setters toApp ctor builder
+    , view = Composer.view setters toApp ctor builder
+    , subscriptions = Composer.subscriptions setters toApp ctor builder
     }
 
 
-run builder =
-    builder
-        |> done
-        |> Browser.element

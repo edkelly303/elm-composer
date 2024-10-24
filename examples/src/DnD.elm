@@ -13,6 +13,7 @@ fruits : List String
 fruits =
     [ "Apples", "Bananas", "Cherries", "Dates" ]
 
+type alias Components a = { dnd : a }
 
 main :
     Program
@@ -28,7 +29,8 @@ main =
                 , itemsUpdated = toApp << ItemsUpdated
                 }
             )
-        |> Composer.Element.run
+        |> Composer.Element.done Components
+        |> Browser.element
 
 
 type alias AppModel =
@@ -44,19 +46,19 @@ app_ =
         \toSelf flags ->
             ( { fruits = fruits }, Cmd.none )
     , update =
-        \dnd toSelf msg model ->
+        \components toSelf msg model ->
             case msg of
                 ItemsUpdated fruits_ ->
                     ( { model | fruits = fruits_ }, Cmd.none )
     , view =
-        \dnd toSelf model ->
+        \components toSelf model ->
             Html.div []
                 [ Html.p [] [ Html.text "This is the view of the `dndList` component:" ]
-                , dnd.view
+                , components.dnd.view
                 , Html.p [] [ Html.text "This is a `Debug.toString` of the list of items:" ]
                 , Html.text (Debug.toString model.fruits)
                 ]
-    , subscriptions = \dnd toSelf model -> Sub.none
+    , subscriptions = \components toSelf model -> Sub.none
     }
 
 
@@ -94,8 +96,11 @@ dndList =
                 |> Sub.map toSelf
     }
 
-send msg = 
+
+send msg =
     Task.perform identity (Task.succeed msg)
+
+
 
 -- All the code from this point on is _exactly_ the same as it is in the DnDList docs
 

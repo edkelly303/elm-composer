@@ -10,6 +10,10 @@ import Task
 import Time
 
 
+type alias Components timer =
+    { timer : timer }
+
+
 main :
     Program
         ()
@@ -24,7 +28,8 @@ main =
                 , timerReset = toApp TimerReset
                 }
             )
-        |> Composer.Element.run
+        |> Composer.Element.done Components
+        |> Browser.element
 
 
 type alias AppModel =
@@ -41,7 +46,7 @@ app_ =
         \toSelf flags ->
             ( { timerExpired = False }, Cmd.none )
     , update =
-        \timer toSelf msg model ->
+        \{ timer } toSelf msg model ->
             case msg of
                 TimerExpired ->
                     ( { model | timerExpired = True }, Cmd.none )
@@ -49,7 +54,7 @@ app_ =
                 TimerReset ->
                     ( { model | timerExpired = False }, Cmd.none )
     , view =
-        \timer toSelf model ->
+        \{ timer } toSelf model ->
             Html.div []
                 [ Html.p []
                     [ Html.text
@@ -105,7 +110,7 @@ app_ =
                     [ Html.text "Reset timer" ]
                 ]
     , subscriptions =
-        \sendToTimer toSelf model ->
+        \{ timer } toSelf model ->
             Sub.none
     }
 

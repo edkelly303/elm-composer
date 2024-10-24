@@ -50,7 +50,7 @@ updater makeAppInterface makeComponentInterface componentUpdate setter maybeThis
                 toComponent
                 newThisComponentModel
     in
-    { appUpdate = acc.appUpdate componentInterface
+    { args = acc.args componentInterface
     , componentCmdsList = thisCmd :: acc.componentCmdsList
     , newComponentsModel = NT.appender newThisComponentModel acc.newComponentsModel
     , emptyComponentsMsg = acc.emptyComponentsMsg
@@ -71,7 +71,7 @@ viewer makeAppInterface makeComponentInterface setter thisComponentModel acc =
                 sendToComponent
                 thisComponentModel
     in
-    { appView = acc.appView componentInterface
+    { args = acc.args componentInterface
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
 
@@ -96,20 +96,20 @@ subscriber makeAppInterface makeComponentInterface componentSubscriptions setter
                 sendToComponent
                 thisComponentModel
     in
-    { appSubscriptions = acc.appSubscriptions componentInterface
+    { args = acc.args componentInterface
     , componentSubscriptionsList = componentSubscriptions_ :: acc.componentSubscriptionsList
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
 
 
-subscriptions setters toApp builder ( appModel, componentsModel ) =
+subscriptions setters toApp ctor builder ( appModel, componentsModel ) =
     let
         gatherSubscriptions =
             NT.endFolder2 builder.subscriber
 
-        { appSubscriptions, componentSubscriptionsList } =
+        { args, componentSubscriptionsList } =
             gatherSubscriptions
-                { appSubscriptions = builder.app.subscriptions
+                { args = ctor
                 , appModel = appModel
                 , componentSubscriptionsList = []
                 , emptyComponentsMsg = builder.emptyComponentsMsg
@@ -117,34 +117,34 @@ subscriptions setters toApp builder ( appModel, componentsModel ) =
                 setters
                 componentsModel
     in
-    Sub.batch (appSubscriptions toApp appModel :: componentSubscriptionsList)
+    Sub.batch (builder.app.subscriptions args toApp appModel :: componentSubscriptionsList)
 
 
-view setters toApp builder ( appModel, componentsModel ) =
+view setters toApp ctor builder ( appModel, componentsModel ) =
     let
         gatherComponentViews =
             NT.endFolder2 builder.viewer
 
-        { appView } =
+        { args } =
             gatherComponentViews
-                { appView = builder.app.view
+                { args = ctor
                 , appModel = appModel
                 , emptyComponentsMsg = builder.emptyComponentsMsg
                 }
                 setters
                 componentsModel
     in
-    appView toApp appModel
+    builder.app.view args toApp appModel
 
 
-update setters toApp builder ( maybeAppMsg, componentsMsg ) ( appModel, componentsModel ) =
+update setters toApp ctor builder ( maybeAppMsg, componentsMsg ) ( appModel, componentsModel ) =
     let
         gatherUpdates =
             NT.endFolder3 builder.updater
 
-        { appUpdate, componentCmdsList, newComponentsModel } =
+        { args, componentCmdsList, newComponentsModel } =
             gatherUpdates
-                { appUpdate = builder.app.update
+                { args = ctor
                 , appModel = appModel
                 , componentCmdsList = []
                 , newComponentsModel = NT.define
@@ -157,7 +157,7 @@ update setters toApp builder ( maybeAppMsg, componentsMsg ) ( appModel, componen
         ( newAppModel, appCmd ) =
             case maybeAppMsg of
                 Just appMsg ->
-                    appUpdate toApp appMsg appModel
+                    builder.app.update args toApp appMsg appModel
 
                 Nothing ->
                     ( appModel, Cmd.none )
