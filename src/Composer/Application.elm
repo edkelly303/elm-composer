@@ -1,11 +1,11 @@
-module Composer.Application exposing (addComponent, defineApp, done)
+module Composer.Application exposing (app, component, compose)
 
 import Composer
 import NestedTuple as NT
 
 
-defineApp app =
-    { app = app
+app app_ =
+    { app = app_
     , emptyComponentsMsg = NT.empty
     , setters = NT.defineSetters
     , initer = NT.define
@@ -15,18 +15,22 @@ defineApp app =
     }
 
 
-addComponent component builder =
+component component_ builder =
+    componentWithRequirements component_ (\_ _ -> ()) builder
+
+
+componentWithRequirements component_ appInterface builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters
-    , initer = NT.folder (Composer.initer component.init) builder.initer
-    , updater = NT.folder3 (Composer.updater component.interface component.update) builder.updater
-    , viewer = NT.folder2 (Composer.viewer component.interface) builder.viewer
-    , subscriber = NT.folder2 (Composer.subscriber component.interface component.subscriptions) builder.subscriber
+    , initer = NT.folder (Composer.initer component_.init) builder.initer
+    , viewer = NT.folder2 (Composer.viewer component_.interface) builder.viewer
+    , updater = NT.folder3 (Composer.updater appInterface component_.interface component_.update) builder.updater
+    , subscriber = NT.folder2 (Composer.subscriber appInterface component_.interface component_.subscriptions) builder.subscriber
     }
 
 
-done builder =
+compose ctor builder =
     let
         setters =
             NT.endSetters builder.setters
@@ -34,23 +38,24 @@ done builder =
         toApp msg =
             ( Just msg, builder.emptyComponentsMsg )
     in
-    { init = init setters toApp builder
-    , update = Composer.update setters toApp builder
-    , view = Composer.view setters toApp builder
-    , subscriptions = Composer.subscriptions setters toApp builder
+    { init = init setters toApp ctor builder
+    , update = Composer.update setters toApp ctor builder
+    , view = Composer.view setters toApp ctor builder
+    , subscriptions = Composer.subscriptions setters toApp ctor builder
     , onUrlRequest = \urlRequest -> builder.app.onUrlRequest urlRequest |> toApp
     , onUrlChange = \url -> builder.app.onUrlChange url |> toApp
     }
 
 
-init setters toApp builder flags url key =
+init setters toApp ctor builder flags url key =
     let
         initialise =
             NT.endFolder builder.initer
 
-        { componentCmdsList, componentsModel } =
+        { args, componentCmdsList, componentsModel } =
             initialise
-                { emptyComponentsMsg = builder.emptyComponentsMsg
+                { args = ctor
+                , emptyComponentsMsg = builder.emptyComponentsMsg
                 , flags = flags
                 , componentCmdsList = []
                 , componentsModel = NT.define
@@ -58,7 +63,7 @@ init setters toApp builder flags url key =
                 setters
 
         ( appModel, appCmd ) =
-            builder.app.init toApp flags url key
+            builder.app.init args toApp flags url key
     in
     ( ( appModel, NT.endAppender componentsModel )
     , Cmd.batch (appCmd :: componentCmdsList)
