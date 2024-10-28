@@ -3,9 +3,7 @@ module Composer.Element exposing
     , addComponentWithRequirements
     , defineApp
     , done
-
     )
-
 
 import Composer
 import NestedTuple as NT
@@ -30,9 +28,9 @@ addComponentWithRequirements component appInterface builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters
-    , initer = NT.folder (Composer.initer component.init) builder.initer
+    , initer = NT.folder (Composer.initer component.interface component.init) builder.initer
     , updater = NT.folder3 (Composer.updater appInterface component.interface component.update) builder.updater
-    , viewer = NT.folder2 (Composer.viewer appInterface component.interface) builder.viewer
+    , viewer = NT.folder2 (Composer.viewer component.interface) builder.viewer
     , subscriber = NT.folder2 (Composer.subscriber appInterface component.interface component.subscriptions) builder.subscriber
     }
 
@@ -45,10 +43,8 @@ done ctor builder =
         toApp msg =
             ( Just msg, builder.emptyComponentsMsg )
     in
-    { init = Composer.init setters toApp builder
+    { init = Composer.init setters toApp ctor builder
     , update = Composer.update setters toApp ctor builder
     , view = Composer.view setters toApp ctor builder
     , subscriptions = Composer.subscriptions setters toApp ctor builder
     }
-
-

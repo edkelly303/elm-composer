@@ -3,21 +3,23 @@ module Composer exposing (..)
 import NestedTuple as NT
 
 
-initer componentInit setter acc =
+initer makeComponentInterface componentInit setter acc =
     let
         toComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
-        toApp msg =
-            ( Just msg, acc.emptyComponentsMsg )
-
         ( thisComponentModel, thisCmd ) =
             componentInit
-                toApp
                 toComponent
                 acc.flags
+
+        componentInterface =
+            makeComponentInterface
+                toComponent
+                thisComponentModel
     in
-    { componentsModel = NT.appender thisComponentModel acc.componentsModel
+    { args = acc.args componentInterface
+    , componentsModel = NT.appender thisComponentModel acc.componentsModel
     , componentCmdsList = thisCmd :: acc.componentCmdsList
     , flags = acc.flags
     , emptyComponentsMsg = acc.emptyComponentsMsg
@@ -46,7 +48,6 @@ updater makeAppInterface makeComponentInterface componentUpdate setter maybeThis
 
         componentInterface =
             makeComponentInterface
-                (makeAppInterface toApp acc.appModel)
                 toComponent
                 newThisComponentModel
     in
@@ -57,17 +58,13 @@ updater makeAppInterface makeComponentInterface componentUpdate setter maybeThis
     }
 
 
-viewer makeAppInterface makeComponentInterface setter thisComponentModel acc =
+viewer makeComponentInterface setter thisComponentModel acc =
     let
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
-        toApp msg =
-            ( Just msg, acc.emptyComponentsMsg )
-
         componentInterface =
             makeComponentInterface
-                (makeAppInterface toApp acc.appModel)
                 sendToComponent
                 thisComponentModel
     in
@@ -86,7 +83,6 @@ subscriber makeAppInterface makeComponentInterface componentSubscriptions setter
 
         componentInterface =
             makeComponentInterface
-                (makeAppInterface toApp acc.appModel)
                 sendToComponent
                 thisComponentModel
 
@@ -167,22 +163,23 @@ update setters toApp ctor builder ( maybeAppMsg, componentsMsg ) ( appModel, com
     )
 
 
-init setters toApp builder flags =
+init setters toApp ctor builder flags =
     let
         initialise =
             NT.endFolder builder.initer
 
-        ( appModel, appCmd ) =
-            builder.app.init toApp flags
-
-        { componentCmdsList, componentsModel } =
+        { args, componentCmdsList, componentsModel } =
             initialise
-                { emptyComponentsMsg = builder.emptyComponentsMsg
+                { args = ctor
+                , emptyComponentsMsg = builder.emptyComponentsMsg
                 , flags = flags
                 , componentCmdsList = []
                 , componentsModel = NT.define
                 }
                 setters
+
+        ( appModel, appCmd ) =
+            builder.app.init args toApp flags
     in
     ( ( appModel, NT.endAppender componentsModel )
     , Cmd.batch (appCmd :: componentCmdsList)

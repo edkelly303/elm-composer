@@ -43,7 +43,7 @@ type AppMsg
 
 app_ =
     { init =
-        \toSelf flags ->
+        \components toSelf flags ->
             ( { timerExpired = False }, Cmd.none )
     , update =
         \{ timer } toSelf msg model ->
@@ -126,26 +126,8 @@ type alias TimerModel =
 
 
 timerComponent =
-    { init =
-        \toApp toSelf flags ->
-            ( Nothing, Cmd.none )
-    , update =
-        \app toSelf msg model ->
-            case msg of
-                Start ->
-                    ( Just 10, Cmd.none )
-
-                Tick ->
-                    if model == Just 0 then
-                        ( Just 0, send app.timerExpired )
-
-                    else
-                        ( Maybe.map (\n -> n - 1) model, Cmd.none )
-
-                Reset ->
-                    ( Nothing, send app.timerReset )
-    , interface =
-        \app toSelf model ->
+    { interface =
+        \toSelf model ->
             { reset = toSelf Reset
             , view =
                 Html.article
@@ -167,6 +149,24 @@ timerComponent =
                         [ Html.text "Reset" ]
                     ]
             }
+    , init =
+        \toSelf flags ->
+            ( Nothing, Cmd.none )
+    , update =
+        \app toSelf msg model ->
+            case msg of
+                Start ->
+                    ( Just 10, Cmd.none )
+
+                Tick ->
+                    if model == Just 0 then
+                        ( Just 0, send app.timerExpired )
+
+                    else
+                        ( Maybe.map (\n -> n - 1) model, Cmd.none )
+
+                Reset ->
+                    ( Nothing, send app.timerReset )
     , subscriptions =
         \app toSelf model ->
             case model of
@@ -175,6 +175,7 @@ timerComponent =
 
                 Just _ ->
                     Time.every 1000 (\_ -> toSelf Tick)
+
     }
 
 

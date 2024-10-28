@@ -43,7 +43,7 @@ type AppMsg
 
 app_ =
     { init =
-        \toSelf flags ->
+        \components toSelf flags ->
             ( { fruits = fruits }, Cmd.none )
     , update =
         \components toSelf msg model ->
@@ -54,25 +54,25 @@ app_ =
         \components toSelf model ->
             Html.div []
                 [ Html.p [] [ Html.text "This is the view of the `dndList` component:" ]
-                , components.dnd.view
+                , components.dnd.view model.fruits
                 , Html.p [] [ Html.text "This is a `Debug.toString` of the list of items:" ]
                 , Html.text (Debug.toString model.fruits)
                 ]
-    , subscriptions = \components toSelf model -> Sub.none
+    , subscriptions = 
+        \components toSelf model -> Sub.none
     }
 
 
 dndList =
-    { init =
-        -- slightly modified the DnDList's `init` function to allow us to pass
-        -- in the list of items during initialisation.
-        \app toSelf flags ->
+    { interface =
+        \toSelf model ->
+            { view = view toSelf model }
+    , init =
+        \toSelf flags ->
             ( { dnd = system.model }
             , Cmd.none
             )
     , update =
-        -- slightly modified the `update` function to send an `AppMsg` to the
-        -- user's app whenever the list of items changes.
         \app toSelf msg model ->
             case msg of
                 DnDMsg dndMsg ->
@@ -86,23 +86,16 @@ dndList =
                         , Cmd.map toSelf (system.commands dnd)
                         ]
                     )
-    , interface =
-        \app toSelf model ->
-            { view = view app toSelf model }
     , subscriptions =
-        -- `subscriptions` is exactly the same, we just need to map the `Sub msg`
         \app toSelf model ->
             subscriptions model
                 |> Sub.map toSelf
+
     }
 
 
 send msg =
     Task.perform identity (Task.succeed msg)
-
-
-
--- All the code from this point on is _exactly_ the same as it is in the DnDList docs
 
 
 config : DnDList.Config String
@@ -132,13 +125,13 @@ subscriptions model =
     system.subscriptions model.dnd
 
 
-view app toSelf model =
+view toSelf model items =
     Html.section
         [ Html.Attributes.style "text-align" "center" ]
-        [ app.items
+        [ items
             |> List.indexedMap (itemView model.dnd)
             |> Html.div []
-        , ghostView model.dnd app.items
+        , ghostView model.dnd items
         ]
         |> Html.map toSelf
 
