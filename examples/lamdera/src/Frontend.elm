@@ -16,7 +16,7 @@ app =
 
 
 composition =
-    Composer.defineApp
+    Composer.app
         { init = init
         , onUrlRequest = UrlClicked
         , onUrlChange = UrlChanged
@@ -25,11 +25,14 @@ composition =
         , subscriptions = subscriptions
         , view = view
         }
-        |> Composer.addComponent (Counter.component { countChanged = \_ -> Noop })
-        |> Composer.done
+        |> Composer.componentWithRequirements
+            Counter.component
+            (\toApp appModel -> { countChanged = \_ -> toApp Noop })
+        |> Composer.compose
+            (\c -> { counter = c })
 
 
-init counter toSelf url key =
+init components toSelf url key =
     ( { key = key
       , frontendCounter = 0
       , backendCounterComponent = 0
@@ -38,7 +41,7 @@ init counter toSelf url key =
     )
 
 
-update counter toSelf msg model =
+update components toSelf msg model =
     case msg of
         UrlClicked urlRequest ->
             case urlRequest of
@@ -75,7 +78,7 @@ update counter toSelf msg model =
             ( model, Cmd.none )
 
 
-updateFromBackend counter toSelf msg model =
+updateFromBackend components toSelf msg model =
     case msg of
         BackendCounterComponentStatusResponded count ->
             ( { model | backendCounterComponent = count }
@@ -83,11 +86,11 @@ updateFromBackend counter toSelf msg model =
             )
 
 
-subscriptions counter toSelf model =
+subscriptions components toSelf model =
     Sub.none
 
 
-view frontendCounterComponent toSelf model =
+view components toSelf model =
     { title = "`elm-composer` in Lamdera"
     , body =
         [ Html.header [ Attr.style "text-align" "center" ]
@@ -108,9 +111,9 @@ view frontendCounterComponent toSelf model =
                 ]
             , Html.h2 [] [ Html.text "A counter component" ]
             , Counter.view
-                frontendCounterComponent.increment
-                frontendCounterComponent.decrement
-                frontendCounterComponent.count
+                components.counter.increment
+                components.counter.decrement
+                components.counter.count
             , Html.p []
                 [ Html.text
                     """
@@ -160,7 +163,7 @@ view frontendCounterComponent toSelf model =
                     Here is the state of the frontend counter component:
                     """
                 ]
-            , Html.pre [ Attr.style "font-size" "16px" ] [ Html.text frontendCounterComponent.debug ]
+            , Html.pre [ Attr.style "font-size" "16px" ] [ Html.text components.counter.debug ]
             , Html.p []
                 [ Html.text
                     """

@@ -14,23 +14,29 @@ app =
 
 
 composition =
-    Composer.defineApp
+    Composer.app
         { init = init
         , update = update
         , updateFromFrontend = updateFromFrontend
-        , subscriptions = \counter toSelf model -> Sub.none
+        , subscriptions = subscriptions
         }
-        |> Composer.addComponent (Counter.component { countChanged = BackendCounterComponentUpdated })
-        |> Composer.done
+        |> Composer.componentWithRequirements
+            Counter.component
+            (\toApp appModel -> { countChanged = toApp << BackendCounterComponentUpdated })
+        |> Composer.compose (\c -> { counter = c })
 
 
-init counter toSelf =
+subscriptions counter toSelf model =
+    Sub.none
+
+
+init components toSelf =
     ( ()
     , Cmd.none
     )
 
 
-update counter toSelf msg model =
+update components toSelf msg model =
     case msg of
         BackendCounterComponentUpdated count ->
             ( model
@@ -38,19 +44,19 @@ update counter toSelf msg model =
             )
 
 
-updateFromFrontend counter toSelf sessionId clientId msg model =
+updateFromFrontend components toSelf sessionId clientId msg model =
     case msg of
         BackendCounterComponentUpdateRequested counterMsg ->
             ( model
             , case counterMsg of
                 Increment ->
-                    Task.perform identity (Task.succeed counter.increment)
+                    Task.perform identity (Task.succeed components.counter.increment)
 
                 Decrement ->
-                    Task.perform identity (Task.succeed counter.decrement)
+                    Task.perform identity (Task.succeed components.counter.decrement)
             )
 
         BackendCounterComponentStatusRequested ->
             ( model
-            , Task.perform toSelf (Task.succeed (BackendCounterComponentUpdated counter.count))
+            , Task.perform toSelf (Task.succeed (BackendCounterComponentUpdated components.counter.count))
             )
