@@ -4,8 +4,8 @@ import Composer
 import NestedTuple as NT
 
 
-defineApp app =
-    { app = app
+app app_ =
+    { app = app_
     , emptyComponentsMsg = NT.empty
     , setters = NT.defineSetters
     , initer = NT.define
@@ -15,18 +15,18 @@ defineApp app =
     }
 
 
-addComponent component builder =
+componentWithRequirements component appInterface builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters
     , initer = NT.folder (initer component.interface component.init) builder.initer
-    , updater = NT.folder3 (Composer.updater component.interface component.update) builder.updater
-    , updaterFromFrontend = NT.folder2 (updaterFromFrontend component.interface) builder.updaterFromFrontend
-    , subscriber = NT.folder2 (Composer.subscriber component.interface component.subscriptions) builder.subscriber
+    , updater = NT.folder3 (Composer.updater appInterface component.interface component.update) builder.updater
+    , updaterFromFrontend = NT.folder2 (updaterFromFrontend appInterface component.interface) builder.updaterFromFrontend
+    , subscriber = NT.folder2 (Composer.subscriber appInterface component.interface component.subscriptions) builder.subscriber
     }
 
 
-done builder =
+compose ctor builder =
     let
         setters =
             NT.endSetters builder.setters
@@ -34,95 +34,88 @@ done builder =
         toApp msg =
             ( Just msg, builder.emptyComponentsMsg )
     in
-    { init = init setters toApp builder
-    , update = Composer.update setters toApp builder
-    , updateFromFrontend = updateFromFrontend setters toApp builder
-    , subscriptions = Composer.subscriptions setters toApp builder
+    { init = init setters toApp ctor builder
+    , update = Composer.update setters toApp ctor builder
+    , updateFromFrontend = updateFromFrontend setters toApp ctor builder
+    , subscriptions = Composer.subscriptions setters toApp ctor builder
     }
 
 
-init setters toApp builder =
+init setters toApp ctor builder =
     let
         initialise =
             NT.endFolder builder.initer
 
-        { appInit, componentCmdsList, componentsModel } =
+        { args, componentCmdsList, componentsModel } =
             initialise
-                { emptyComponentsMsg = builder.emptyComponentsMsg
-                , appInit = builder.app.init
+                { args = ctor
+                , emptyComponentsMsg = builder.emptyComponentsMsg
                 , componentCmdsList = []
                 , componentsModel = NT.define
                 }
                 setters
 
         ( appModel, appCmd ) =
-            appInit toApp
+            builder.app.init args toApp
     in
     ( ( appModel, NT.endAppender componentsModel )
     , Cmd.batch (appCmd :: componentCmdsList)
     )
 
 
-initer componentInterface componentInit setter acc =
+initer makeComponentInterface componentInit setter acc =
     let
         sendToComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
-        toApp msg =
-            ( Just msg, acc.emptyComponentsMsg )
-
         ( thisComponentModel, thisCmd ) =
-            componentInit
-                toApp
-                sendToComponent
+            componentInit sendToComponent
 
-        interface =
-            componentInterface
-                toApp
+        componentInterface =
+            makeComponentInterface
                 sendToComponent
                 thisComponentModel
     in
-    { componentsModel = NT.appender thisComponentModel acc.componentsModel
-    , appInit = acc.appInit interface
+    { args = acc.args componentInterface
+    , componentsModel = NT.appender thisComponentModel acc.componentsModel
     , componentCmdsList = thisCmd :: acc.componentCmdsList
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
 
 
-updaterFromFrontend componentInterface setter thisComponentModel acc =
+updaterFromFrontend appInterface makeComponentInterface setter thisComponentModel acc =
     let
-        sendToComponent msg =
+        toComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
         toApp msg =
             ( Just msg, acc.emptyComponentsMsg )
 
-        interface =
-            componentInterface
-                toApp
-                sendToComponent
+        componentInterface =
+            makeComponentInterface
+                toComponent
                 thisComponentModel
     in
-    { appUpdate = acc.appUpdate interface
+    { args = acc.args componentInterface
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
 
 
-updateFromFrontend setters toApp builder sessionId clientId msgFromFrontend ( appModel, componentsModel ) =
+updateFromFrontend setters toApp ctor builder sessionId clientId msgFromFrontend ( appModel, componentsModel ) =
     let
         gatherUpdates =
             NT.endFolder2 builder.updaterFromFrontend
 
-        { appUpdate } =
+        { args } =
             gatherUpdates
-                { appUpdate = builder.app.updateFromFrontend
+                { args = ctor
                 , emptyComponentsMsg = builder.emptyComponentsMsg
                 }
                 setters
                 componentsModel
 
         ( newAppModel, appCmd ) =
-            appUpdate toApp sessionId clientId msgFromFrontend appModel
+            builder.app.updateFromFrontend args toApp sessionId clientId msgFromFrontend appModel
     in
     ( ( newAppModel, componentsModel )
     , appCmd
