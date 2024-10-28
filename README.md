@@ -21,33 +21,35 @@ Compose Elm apps with typed message passing
 ## elm-composer's solution
 
 ```elm
-import Composer.Element as Composer
+import Composer.Element
+import Browser
 
 main =
-  Composer.defineApp app
-    |> Composer.addComponent component
-    |> Composer.run
+  Composer.Element.app app
+    |> Composer.Element.component component
+    |> Composer.Element.compose (\component_ -> { component = component_ })
+    |> Browser.element
 ```
 
 ### Huh! But what's `component` in that example?
 
 A component is almost exactly like the record of `init`, `update`, `view` and `subscriptions` functions that you normally pass to `Browser.element`, except that:
 
-- Your `init`, `update`, `view` and `subscriptions` functions each take 2 extra arguments: `toApp` and `toSelf`.
-- You rename the `view` function to `interface`.
+- Your `init`, `update`, and `subscriptions` functions each take 2 extra arguments: `app` and `toSelf`.
+- You rename the `view` function to `interface`, and give it an extra `toSelf` argument.
 - For example:
   ```diff
   - view model = ...
-  + interface toApp toSelf model = ...
+  + interface toSelf model = ...
   
   - init flags = ...
-  + init toApp toSelf flags = ...
+  + init app toSelf flags = ...
 
   - update msg model = ...
-  + update toApp toSelf msg model = ...
+  + update app toSelf msg model = ...
 
   - subscriptions model = ...
-  + subscriptions toApp toSelf model = ...
+  + subscriptions app toSelf model = ...
   ```
 - Any messages that you want your component to send itself need to be wrapped in `toSelf`:
   ```diff
@@ -72,21 +74,20 @@ A component is almost exactly like the record of `init`, `update`, `view` and `s
 
 You define your main app by defining the same record of functions that you would pass to a standard `Browser.element`, `Browser.document` or `Browser.application`, except:
 
-- For each component you want to integrate with your main app, you add a `nameOfComponent` argument to your main app's `init`, `update`, `view` and `subscriptions` functions.
-- After these component arguments, you also add a `toSelf` argument.
+- You add two arguments to your main app's `init`, `update`, `view` and `subscriptions` functions: `components` and `toSelf`.
 - For example:
   ```diff
   - view model = ...
-  + view myFirstComponent mySecondComponent toSelf model = ...
+  + view components toSelf model = ...
     
   - init flags = ...
-  + init myFirstComponent mySecondComponent toSelf flags = ...
+  + init components toSelf flags = ...
 
   - update msg model = ...
-  + update myFirstComponent mySecondComponent toSelf msg model = ...
+  + update components toSelf msg model = ...
 
   - subscriptions model = ...
-  + subscriptions myFirstComponent mySecondComponent toSelf model = ...
+  + subscriptions components toSelf model = ...
   ```
 - Any messages that you want your main app to send itself need to be wrapped in `toSelf` (as above).
 
@@ -112,7 +113,7 @@ component =
   , update = ...
   , subscriptions = ...
   , interface =
-    \toApp toSelf model ->
+    \toSelf model ->
       Html.button
         [ Html.Events.onClick (toSelf Increment) ]
         [ Html.text (String.fromInt model.count) ]
@@ -131,10 +132,10 @@ app =
   , update = ...
   , subscriptions = ...
   , view =
-    \component toSelf model ->
+    \components toSelf model ->
       Html.div []
         [ Html.text "Behold my wondrous component!"
-        , component
+        , components.component
         ] 
   }
 ```
@@ -149,7 +150,7 @@ component =
   , update = ...
   , subscriptions = ...
   , interface =
-    \toApp toSelf model ->
+    \app toSelf model ->
       { count = model.count
       , increment = toSelf Increment
       }
@@ -164,12 +165,12 @@ app =
   , update = ...
   , subscriptions = ...
   , view =
-    \component toSelf model ->
+    \components toSelf model ->
       Html.div []
         [ Html.text "Behold my wondrous component which I have rendered myself!"
         , Html.button
-          [ Html.Events.onClick component.increment ]
-          [ Html.text (String.fromInt component.count) ]
+          [ Html.Events.onClick components.component.increment ]
+          [ Html.text (String.fromInt components.component.count) ]
         ] 
   }
 ```
@@ -186,20 +187,22 @@ So far, we've got a component that can provide an interface that controls how ou
 
 But what if we also want the converse: an interface that controls how our component can interact with our main app's model, and specifies what messages it can send to the main app?
 
-This is where `Composer.addComponentWithRequirements` comes in.
+This is where `Composer.componentWithRequirements` comes in.
 
-Under the covers, when we call the simole baby version of `Composer.addComponent`, what's really happening is this:
+Under the covers, when we call the simole baby version of `Composer.component`, what's really happening is this:
 
 ```diff
 import Composer.Element as Composer
+import Browser
 
 main =
-  Composer.defineApp app
--    |> Composer.addComponent
-+    |> Composer.addComponentWithRequirements
-        component
+  Composer.app app
+-    |> Composer.component component
++    |> Composer.componentWithRequirements
++        component
 +        (\toApp appModel -> toApp)
-    |> Composer.run
+    |> Composer.compose (\component_ -> { component = component_ })
+    |> Browser.element
 ```
 
 As you can see, there's now an extra function passed to each component that specifies the interface that the main app provides to the component. In this case, we simply return the `toApp` message constructor, and that's why we end up with the `toApp` argument being passed to our component's update, view and subscriptions functions.
