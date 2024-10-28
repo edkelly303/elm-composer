@@ -21,7 +21,7 @@ app app_ =
 
 
 component component_ builder =
-    componentWithRequirements component_ (\toApp appModel -> toApp) builder
+    componentWithRequirements component_ (\toApp appModel -> ()) builder
 
 
 componentWithRequirements component_ appInterface builder =
