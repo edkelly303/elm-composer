@@ -13,7 +13,10 @@ fruits : List String
 fruits =
     [ "Apples", "Bananas", "Cherries", "Dates" ]
 
-type alias Components a = { dnd : a }
+
+type alias Components a =
+    { dnd : a }
+
 
 main :
     Program
@@ -58,7 +61,7 @@ app_ =
                 , Html.p [] [ Html.text "This is a `Debug.toString` of the list of items:" ]
                 , Html.text (Debug.toString model.fruits)
                 ]
-    , subscriptions = 
+    , subscriptions =
         \components toSelf model -> Sub.none
     }
 
@@ -90,7 +93,6 @@ dndList =
         \app toSelf model ->
             subscriptions model
                 |> Sub.map toSelf
-
     }
 
 

@@ -175,7 +175,6 @@ timerComponent =
 
                 Just _ ->
                     Time.every 1000 (\_ -> toSelf Tick)
-
     }
 
 

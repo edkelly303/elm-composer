@@ -3,7 +3,6 @@ module Composer.Document exposing (addComponent, defineApp, done)
 import Composer.Element
 
 
-
 defineApp =
     Composer.Element.defineApp
 
