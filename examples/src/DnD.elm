@@ -24,15 +24,15 @@ main :
         ( AppModel, ( DnDModel, () ) )
         ( Maybe AppMsg, ( Maybe DnDMsg, () ) )
 main =
-    Composer.Element.defineApp app_
-        |> Composer.Element.addComponentWithRequirements
+    Composer.Element.app app_
+        |> Composer.Element.componentWithRequirements
             dndList
             (\toApp appModel ->
                 { items = appModel.fruits
                 , itemsUpdated = toApp << ItemsUpdated
                 }
             )
-        |> Composer.Element.done Components
+        |> Composer.Element.compose Components
         |> Browser.element
 
 

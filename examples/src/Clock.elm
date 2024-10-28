@@ -8,9 +8,9 @@ import Time
 
 
 main =
-    C.defineApp app_
-        |> C.addComponent clock
-        |> C.done (\clock_ -> { clock = clock_ })
+    C.app app_
+        |> C.component clock
+        |> C.compose (\clock_ -> { clock = clock_ })
         |> Browser.element
 
 

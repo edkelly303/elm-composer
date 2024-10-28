@@ -1,16 +1,16 @@
 module Composer.Element exposing
-    ( addComponent
-    , addComponentWithRequirements
-    , defineApp
-    , done
+    ( component
+    , componentWithRequirements
+    , app
+    , compose
     )
 
 import Composer
 import NestedTuple as NT
 
 
-defineApp app =
-    { app = app
+app app_ =
+    { app = app_
     , emptyComponentsMsg = NT.empty
     , setters = NT.defineSetters
     , initer = NT.define
@@ -20,22 +20,22 @@ defineApp app =
     }
 
 
-addComponent component builder =
-    addComponentWithRequirements component (\toApp appModel -> toApp) builder
+component component_ builder =
+    componentWithRequirements component_ (\toApp appModel -> toApp) builder
 
 
-addComponentWithRequirements component appInterface builder =
+componentWithRequirements component_ appInterface builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters
-    , initer = NT.folder (Composer.initer component.interface component.init) builder.initer
-    , updater = NT.folder3 (Composer.updater appInterface component.interface component.update) builder.updater
-    , viewer = NT.folder2 (Composer.viewer component.interface) builder.viewer
-    , subscriber = NT.folder2 (Composer.subscriber appInterface component.interface component.subscriptions) builder.subscriber
+    , initer = NT.folder (Composer.initer component_.interface component_.init) builder.initer
+    , updater = NT.folder3 (Composer.updater appInterface component_.interface component_.update) builder.updater
+    , viewer = NT.folder2 (Composer.viewer component_.interface) builder.viewer
+    , subscriber = NT.folder2 (Composer.subscriber appInterface component_.interface component_.subscriptions) builder.subscriber
     }
 
 
-done ctor builder =
+compose ctor builder =
     let
         setters =
             NT.endSetters builder.setters

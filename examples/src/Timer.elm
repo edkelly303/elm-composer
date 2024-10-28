@@ -20,15 +20,15 @@ main :
         ( AppModel, ( TimerModel, () ) )
         ( Maybe AppMsg, ( Maybe TimerMsg, () ) )
 main =
-    Composer.Element.defineApp app_
-        |> Composer.Element.addComponentWithRequirements
+    Composer.Element.app app_
+        |> Composer.Element.componentWithRequirements
             timerComponent
             (\toApp appModel ->
                 { timerExpired = toApp TimerExpired
                 , timerReset = toApp TimerReset
                 }
             )
-        |> Composer.Element.done Components
+        |> Composer.Element.compose Components
         |> Browser.element
 
 

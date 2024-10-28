@@ -1,15 +1,15 @@
-module Composer.Document exposing (addComponent, defineApp, done)
+module Composer.Document exposing (component, app, compose)
 
 import Composer.Element
 
 
-defineApp =
-    Composer.Element.defineApp
+app =
+    Composer.Element.app
 
 
-addComponent =
-    Composer.Element.addComponent
+component =
+    Composer.Element.component
 
 
-done =
-    Composer.Element.done
+compose =
+    Composer.Element.compose
