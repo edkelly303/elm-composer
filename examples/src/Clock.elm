@@ -49,7 +49,9 @@ clock =
             }
     , init =
         \toSelf model ->
-            ( Time.millisToPosix 0, Cmd.none )
+            ( Time.millisToPosix 0
+            , Task.perform (toSelf << Tick) Time.now
+            )
     , update =
         \app toSelf (Tick now) model ->
             ( now, Cmd.none )
