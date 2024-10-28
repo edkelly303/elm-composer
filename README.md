@@ -25,15 +25,16 @@ import Composer.Element
 import Browser
 
 main =
-  Composer.Element.app app
-    |> Composer.Element.component component
-    |> Composer.Element.compose (\component_ -> { component = component_ })
+  Composer.Element.app myApp
+    |> Composer.Element.component counter
+    |> Composer.Element.component clock
+    |> Composer.Element.compose (\counter_ clock_ -> { counter = counter_, clock = clock_ })
     |> Browser.element
 ```
 
-### Huh! But what's `component` in that example?
+### Huh! But what are `counter` and `clock` in that example?
 
-A component is almost exactly like the record of `init`, `update`, `view` and `subscriptions` functions that you normally pass to `Browser.element`, except that:
+They are components. A component is almost exactly like the record of `init`, `update`, `view` and `subscriptions` functions that you normally pass to `Browser.element`, except that:
 
 - You rename the `view` function to `interface` and add an extra `toSelf` argument to it.
 - You add an extra  `toSelf` argument to your `init` function.
@@ -71,22 +72,22 @@ A component is almost exactly like the record of `init`, `update`, `view` and `s
   Task.perform (\() -> toApp MainAppMsg) (Task.succeed ())
   ```
 
-### Hmm, ok, and what's `app`?
+### Hmm, ok, and what's `myApp`?
 
-You define your main app by defining the same record of functions that you would pass to a standard `Browser.element`, `Browser.document` or `Browser.application`, except:
+`myApp` is your main app. You define your main app by defining the same record of functions that you would pass to a standard `Browser.element`, `Browser.document` or `Browser.application`, except:
 
 - You add two arguments to your main app's `init`, `update`, `view` and `subscriptions` functions: `components` and `toSelf`.
 - For example:
-  ```diff
-  - view model = ...
-  + view components toSelf model = ...
-    
+  ```diff  
   - init flags = ...
   + init components toSelf flags = ...
 
   - update msg model = ...
   + update components toSelf msg model = ...
-
+  
+  - view model = ...
+  + view components toSelf model = ...
+  
   - subscriptions model = ...
   + subscriptions components toSelf model = ...
   ```
@@ -100,16 +101,16 @@ Why did we rename the component's `view` function to `interface`? I'm so glad yo
 In the first component we write, we will probably do something like this:
 
 ```elm
-type alias ComponentModel =
+type alias CounterModel =
   { count : Int
   , ... other fields
   }
 
-type ComponentMsg
+type CounterMsg
   = Increment
   | ... other variants
 
-component =
+counter =
   { init = ...
   , update = ...
   , subscriptions = ...
@@ -121,14 +122,14 @@ component =
   }
 ```
 
-Our component's `interface` function simply returns a value of type `Html msg`.
+Our `counter` component's `interface` function simply returns a value of type `Html msg`.
 
 The return value of the `interface` function automatically gets passed into our main app, as an argument to its `init`, `update`, `view`, and `subscriptions` functions. Let's call that argument "component".
 
 So, if we want to render the HTML returned from our component's `interface`, all we need to do is use the `component` argument somewhere in our main app's view function, like so:
 
 ```elm
-app =
+myApp =
   { init = ...
   , update = ...
   , subscriptions = ...
@@ -146,7 +147,7 @@ But! Unlike a normal Elm app's `view` function, there is no need for our `interf
 So, maybe instead of having the component render itself and forcing our main app to live with those rendering decisions, we could instead provide the ingredients the main app will need to render the component properly:
 
 ```elm
-component =
+counter =
   { init = ...
   , update = ...
   , subscriptions = ...
@@ -161,7 +162,7 @@ component =
 This isn't simply a view, it's an interface - a way to control how the main app is allowed to interact with our component. And we use it thus:
 
 ```elm
-app =
+myApp =
   { init = ...
   , update = ...
   , subscriptions = ...
@@ -198,16 +199,17 @@ import Browser
 
 main =
   Composer.app app
--    |> Composer.component component
+-    |> Composer.component counter
 +    |> Composer.componentWithRequirements
-+        component
-+        (\toApp appModel -> toApp)
-    |> Composer.compose (\component_ -> { component = component_ })
++        counter
++        (\toApp appModel -> ())
+    |> Composer.Element.component clock
+    |> Composer.Element.compose (\counter_ clock_ -> { counter = counter_, clock = clock_ })
     |> Browser.element
 ```
 
-As you can see, there's now an extra function passed to each component that specifies the interface that the main app provides to the component. In this case, we simply return the `toApp` message constructor, and that's why we end up with the `toApp` argument being passed to our component's update, view and subscriptions functions.
+As you can see, there's now an extra function passed to each component that specifies the interface that the main app provides to the component. In this case, we simply return the unit type `()`, and that `()` gets passed to our component's `update`, `view` and `subscriptions` functions as the `app` argument.
 
-Now, just as with the `interface` function we defined earlier in our component, this new app interface function can return any type we like. Instead of returning the `toApp` constructor, we might prefer to only expose a limited subset of the variants of the main app's `msg` type, or we might expose a subset of fields from the main app's `model`.
+Now, just as with the `interface` function we defined earlier in our component, this new app interface function can return any type we like. Instead of returning `()`, we might decide expose a limited subset of the variants of the main app's `msg` type, or a subset of fields from the main app's `model`.
 
 To see how this might work in practice, check out the `DnD` example in the examples folder.
