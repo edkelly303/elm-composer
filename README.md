@@ -121,9 +121,17 @@ counter =
 
 Our `counter` component's `interface` function simply returns a value of type `Html msg`.
 
-The return value of the `interface` function automatically gets passed into our main app, as an argument to its `init`, `update`, `view`, and `subscriptions` functions. Let's call that argument "component".
+Look back at the function that we passed to `Composer.Element.compose` in our `main` function: 
 
-So, if we want to render the HTML returned from our component's `interface`, all we need to do is use the `component` argument somewhere in our main app's view function, like so:
+```elm
+    |> Composer.Element.compose (\counter_ clock_ -> { counter = counter_, clock = clock_ })
+```
+
+This function takes the return value of each component's `interface` function and inserts it into a record. The `counter` component's interface is in the `counter` field of the record, and the `clock` component's interface is in the `clock` field. 
+
+This record is then passed into our main app's `init`, `update`, `view`, and `subscriptions` functions as their first argument. Let's call that argument "components".
+
+Now, if we want to render the HTML returned from our `counter` component's `interface`, all we need to do is add `components.counter` somewhere in our main app's view function, like so:
 
 ```elm
 myApp =
@@ -133,8 +141,8 @@ myApp =
   , view =
     \components toSelf model ->
       Html.div []
-        [ Html.text "Behold my wondrous component!"
-        , components.component
+        [ Html.text "Behold my wondrous counter component!"
+        , components.counter
         ] 
   }
 ```
@@ -149,7 +157,7 @@ counter =
   , update = ...
   , subscriptions = ...
   , interface =
-    \app toSelf model ->
+    \toSelf model ->
       { count = model.count
       , increment = toSelf Increment
       }
@@ -166,10 +174,10 @@ myApp =
   , view =
     \components toSelf model ->
       Html.div []
-        [ Html.text "Behold my wondrous component which I have rendered myself!"
+        [ Html.text "Behold my wondrous counter component which I have rendered myself!"
         , Html.button
-          [ Html.Events.onClick components.component.increment ]
-          [ Html.text (String.fromInt components.component.count) ]
+          [ Html.Events.onClick components.counter.increment ]
+          [ Html.text (String.fromInt components.counter.count) ]
         ] 
   }
 ```
