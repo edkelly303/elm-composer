@@ -35,15 +35,16 @@ main =
 
 A component is almost exactly like the record of `init`, `update`, `view` and `subscriptions` functions that you normally pass to `Browser.element`, except that:
 
-- Your `init`, `update`, and `subscriptions` functions each take 2 extra arguments: `app` and `toSelf`.
-- You rename the `view` function to `interface`, and give it an extra `toSelf` argument.
+- You rename the `view` function to `interface` and add an extra `toSelf` argument to it.
+- You add an extra  `toSelf` argument to your `init` function.
+- You add two extra arguments to your `update` and `subscriptions` functions: `app` and `toSelf`.
 - For example:
   ```diff
   - view model = ...
   + interface toSelf model = ...
   
   - init flags = ...
-  + init app toSelf flags = ...
+  + init toSelf flags = ...
 
   - update msg model = ...
   + update app toSelf msg model = ...
@@ -189,7 +190,7 @@ But what if we also want the converse: an interface that controls how our compon
 
 This is where `Composer.componentWithRequirements` comes in.
 
-Under the covers, when we call the simole baby version of `Composer.component`, what's really happening is this:
+Under the covers, when we call the simple baby version of `Composer.component`, what's really happening is this:
 
 ```diff
 import Composer.Element as Composer
