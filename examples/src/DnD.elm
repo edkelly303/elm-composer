@@ -14,85 +14,90 @@ fruits =
     [ "Apples", "Bananas", "Cherries", "Dates" ]
 
 
+type alias Components a =
+    { dnd : a }
+
+
 main :
     Program
         ()
         ( AppModel, ( DnDModel, () ) )
         ( Maybe AppMsg, ( Maybe DnDMsg, () ) )
 main =
-    Composer.Element.defineApp app
-        |> Composer.Element.addComponent
-            (dndList
-                { items = fruits
+    Composer.Element.app app_
+        |> Composer.Element.componentWithRequirements
+            dndList
+            (\toApp appModel ->
+                { items = appModel.fruits
+                , itemsUpdated = toApp << ItemsUpdated
                 }
             )
-        |> Composer.Element.run
+        |> Composer.Element.compose Components
+        |> Browser.element
 
 
 type alias AppModel =
-    -- our `AppModel` knows _nothing at all_ about the `DnDList`
-    ()
+    { fruits : List String }
 
 
-type alias AppMsg =
-    ()
+type AppMsg
+    = ItemsUpdated (List String)
 
 
-app =
-    { init = \dnd toSelf flags -> ( (), Cmd.none )
+app_ =
+    { init =
+        \components toSelf flags ->
+            ( { fruits = fruits }, Cmd.none )
     , update =
-        \dnd toSelf msg model ->
-            ( (), Cmd.none )
+        \components toSelf msg model ->
+            case msg of
+                ItemsUpdated fruits_ ->
+                    ( { model | fruits = fruits_ }, Cmd.none )
     , view =
-        \dnd toSelf model ->
+        \components toSelf model ->
             Html.div []
                 [ Html.p [] [ Html.text "This is the view of the `dndList` component:" ]
-                , dnd.view
+                , components.dnd.view model.fruits
                 , Html.p [] [ Html.text "This is a `Debug.toString` of the list of items:" ]
-                , Html.text (Debug.toString dnd.items)
+                , Html.text (Debug.toString model.fruits)
                 ]
-    , subscriptions = \dnd toSelf model -> Sub.none
+    , subscriptions =
+        \components toSelf model -> Sub.none
     }
 
 
-dndList { items } =
-    { init =
-        -- slightly modified the DnDList's `init` function to allow us to pass
-        -- in the list of items during initialisation.
-        \toApp toSelf flags ->
-            ( { dnd = system.model
-              , items = items
-              }
+dndList =
+    { interface =
+        \toSelf model ->
+            { view = view toSelf model }
+    , init =
+        \toSelf flags ->
+            ( { dnd = system.model }
             , Cmd.none
             )
     , update =
-        -- slightly modified the `update` function to send an `AppMsg` to the
-        -- user's app whenever the list of items changes.
-        \toApp toSelf msg model ->
+        \app toSelf msg model ->
             case msg of
                 DnDMsg dndMsg ->
                     let
                         ( dnd, newItems ) =
-                            system.update dndMsg model.dnd model.items
+                            system.update dndMsg model.dnd app.items
                     in
-                    ( { model | dnd = dnd, items = newItems }
-                    , Cmd.map toSelf (system.commands dnd)
+                    ( { model | dnd = dnd }
+                    , Cmd.batch
+                        [ send (app.itemsUpdated newItems)
+                        , Cmd.map toSelf (system.commands dnd)
+                        ]
                     )
-    , interface =
-        \toApp toSelf model ->
-            { view = view toApp toSelf model
-            , items = model.items
-            }
     , subscriptions =
-        -- `subscriptions` is exactly the same, we just need to map the `Sub msg`
-        \toApp toSelf model ->
+        \app toSelf model ->
             subscriptions model
                 |> Sub.map toSelf
     }
 
 
-
--- All the code from this point on is _exactly_ the same as it is in the DnDList docs
+send msg =
+    Task.perform identity (Task.succeed msg)
 
 
 config : DnDList.Config String
@@ -110,9 +115,7 @@ system =
 
 
 type alias DnDModel =
-    { dnd : DnDList.Model
-    , items : List String
-    }
+    { dnd : DnDList.Model }
 
 
 type DnDMsg
@@ -124,13 +127,13 @@ subscriptions model =
     system.subscriptions model.dnd
 
 
-view toApp toSelf model =
+view toSelf model items =
     Html.section
         [ Html.Attributes.style "text-align" "center" ]
-        [ model.items
+        [ items
             |> List.indexedMap (itemView model.dnd)
             |> Html.div []
-        , ghostView model.dnd model.items
+        , ghostView model.dnd items
         ]
         |> Html.map toSelf
 

@@ -1,5 +1,11 @@
 {
     "targets": {
+        "clock-demo": {
+            "inputs": [
+                "src/Clock.elm"
+            ],
+            "output": "public/build/clock.js"
+        },
         "timer-demo": {
             "inputs": [
                 "src/Timer.elm"

@@ -1,12 +1,16 @@
-module Composer.Element exposing (addComponent, defineApp, done, run)
+module Composer.Element exposing
+    ( app
+    , component
+    , componentWithRequirements
+    , compose
+    )
 
-import Browser
 import Composer
 import NestedTuple as NT
 
 
-defineApp app =
-    { app = app
+app app_ =
+    { app = app_
     , emptyComponentsMsg = NT.empty
     , setters = NT.defineSetters
     , initer = NT.define
@@ -16,18 +20,22 @@ defineApp app =
     }
 
 
-addComponent component builder =
+component component_ builder =
+    componentWithRequirements component_ (\toApp appModel -> ()) builder
+
+
+componentWithRequirements component_ appInterface builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters
-    , initer = NT.folder (Composer.initer component.interface component.init) builder.initer
-    , updater = NT.folder3 (Composer.updater component.interface component.update) builder.updater
-    , viewer = NT.folder2 (Composer.viewer component.interface) builder.viewer
-    , subscriber = NT.folder2 (Composer.subscriber component.interface component.subscriptions) builder.subscriber
+    , initer = NT.folder (Composer.initer component_.interface component_.init) builder.initer
+    , updater = NT.folder3 (Composer.updater appInterface component_.interface component_.update) builder.updater
+    , viewer = NT.folder2 (Composer.viewer component_.interface) builder.viewer
+    , subscriber = NT.folder2 (Composer.subscriber appInterface component_.interface component_.subscriptions) builder.subscriber
     }
 
 
-done builder =
+compose ctor builder =
     let
         setters =
             NT.endSetters builder.setters
@@ -35,14 +43,8 @@ done builder =
         toApp msg =
             ( Just msg, builder.emptyComponentsMsg )
     in
-    { init = Composer.init setters toApp builder
-    , update = Composer.update setters toApp builder
-    , view = Composer.view setters toApp builder
-    , subscriptions = Composer.subscriptions setters toApp builder
+    { init = Composer.init setters toApp ctor builder
+    , update = Composer.update setters toApp ctor builder
+    , view = Composer.view setters toApp ctor builder
+    , subscriptions = Composer.subscriptions setters toApp ctor builder
     }
-
-
-run builder =
-    builder
-        |> done
-        |> Browser.element

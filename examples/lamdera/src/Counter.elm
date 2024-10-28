@@ -8,19 +8,19 @@ import Task
 import Types exposing (CounterMsg(..))
 
 
-component { countChanged } =
+component =
     { init = init
-    , update = update countChanged
+    , update = update
     , interface = interface
     , subscriptions = subscriptions
     }
 
 
-init toApp toSelf =
+init toSelf =
     ( 0, Cmd.none )
 
 
-update countChanged toApp toSelf msg model =
+update app toSelf msg model =
     let
         newModel =
             case msg of
@@ -31,11 +31,11 @@ update countChanged toApp toSelf msg model =
                     model - 1
     in
     ( newModel
-    , Task.perform identity (Task.succeed (toApp (countChanged newModel)))
+    , Task.perform identity (Task.succeed (app.countChanged newModel))
     )
 
 
-interface toApp toSelf model =
+interface toSelf model =
     { count = model
     , increment = toSelf Increment
     , decrement = toSelf Decrement
@@ -43,7 +43,7 @@ interface toApp toSelf model =
     }
 
 
-subscriptions toApp toSelf model =
+subscriptions app toSelf model =
     Sub.none
 
 
