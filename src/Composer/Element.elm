@@ -1,7 +1,7 @@
 module Composer.Element exposing
-    ( component
+    ( app
+    , component
     , componentWithRequirements
-    , app
     , compose
     )
 
