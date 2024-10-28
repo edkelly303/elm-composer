@@ -67,10 +67,7 @@ They are components. A component is almost exactly like the record of `init`, `u
   - Time.every 1000 (\now -> TimeUpdated now)
   + Time.every 1000 (\now -> toSelf (TimeUpdated now))`
   ```  
-- If you want your component to send a message to your main app, you need to wrap it in `toApp`. The simplest way to send a message is probably something like this:
-  ```elm
-  Task.perform (\() -> toApp MainAppMsg) (Task.succeed ())
-  ```
+
 
 ### Hmm, ok, and what's `myApp`?
 
