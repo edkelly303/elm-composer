@@ -1,4 +1,4 @@
-module Composer.Document exposing (component, app, compose)
+module Composer.Document exposing (app, component, compose)
 
 import Composer.Element
 
@@ -9,6 +9,10 @@ app =
 
 component =
     Composer.Element.component
+
+
+componentWithRequirements =
+    Composer.Element.componentWithRequirements
 
 
 compose =
