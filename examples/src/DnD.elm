@@ -41,18 +41,18 @@ type DnDMsg
     = DnDMsg DnDList.Msg
 
 
-type alias DnDAppInterface =
+type alias AppToDnD =
     { items : List String
     , itemsUpdated : List String -> ProgMsg
     }
 
 
-type alias DnDComponentInterface =
+type alias DnDToApp =
     { view : List String -> Html.Html ProgMsg }
 
 
 type alias ComponentInterfaces =
-    { dnd : DnDComponentInterface }
+    { dnd : DnDToApp }
 
 
 fruits : List String
@@ -125,7 +125,7 @@ dndApp =
     }
 
 
-makeDndAppInterface : (AppMsg -> ProgMsg) -> AppModel -> DnDAppInterface
+makeDndAppInterface : (AppMsg -> ProgMsg) -> AppModel -> AppToDnD
 makeDndAppInterface toApp appModel =
     { items = appModel.fruits
     , itemsUpdated = toApp << ItemsUpdated
@@ -133,10 +133,10 @@ makeDndAppInterface toApp appModel =
 
 
 dndComponent :
-    { interface : (DnDMsg -> ProgMsg) -> DnDModel -> DnDComponentInterface
+    { interface : (DnDMsg -> ProgMsg) -> DnDModel -> DnDToApp
     , init : (DnDMsg -> ProgMsg) -> Flags -> ( DnDModel, Cmd ProgMsg )
-    , update : DnDAppInterface -> (DnDMsg -> ProgMsg) -> DnDMsg -> DnDModel -> ( DnDModel, Cmd ProgMsg )
-    , subscriptions : DnDAppInterface -> (DnDMsg -> ProgMsg) -> DnDModel -> Sub ProgMsg
+    , update : AppToDnD -> (DnDMsg -> ProgMsg) -> DnDMsg -> DnDModel -> ( DnDModel, Cmd ProgMsg )
+    , subscriptions : AppToDnD -> (DnDMsg -> ProgMsg) -> DnDModel -> Sub ProgMsg
     }
 dndComponent =
     { interface =
