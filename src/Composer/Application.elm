@@ -1,4 +1,4 @@
-module Composer.Application exposing (app, component, compose)
+module Composer.Application exposing (app, component, componentSimple, compose)
 
 import Composer
 import NestedTuple as NT
@@ -15,15 +15,15 @@ app app_ =
     }
 
 
-component component_ builder =
-    componentWithRequirements component_ (\_ _ -> ()) builder
+componentSimple component_ builder =
+    component component_ (\_ _ -> ()) builder
 
 
-componentWithRequirements component_ appInterface builder =
+component component_ appInterface builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters
-    , initer = NT.folder (Composer.initer component_.init) builder.initer
+    , initer = NT.folder (Composer.initer component_.interface component_.init) builder.initer
     , viewer = NT.folder2 (Composer.viewer component_.interface) builder.viewer
     , updater = NT.folder3 (Composer.updater appInterface component_.interface component_.update) builder.updater
     , subscriber = NT.folder2 (Composer.subscriber appInterface component_.interface component_.subscriptions) builder.subscriber
