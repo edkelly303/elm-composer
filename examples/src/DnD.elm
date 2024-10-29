@@ -23,10 +23,6 @@ type alias ProgMsg =
     ( Maybe AppMsg, ( Maybe DnDMsg, () ) )
 
 
-type alias Components =
-    { dnd : DnDInterface }
-
-
 type alias AppModel =
     { fruits : List String, key : Browser.Navigation.Key }
 
@@ -37,12 +33,6 @@ type AppMsg
     | UrlChanged Url.Url
 
 
-type alias AppInterface =
-    { items : List String
-    , itemsUpdated : List String -> ProgMsg
-    }
-
-
 type alias DnDModel =
     { dnd : DnDList.Model }
 
@@ -51,8 +41,18 @@ type DnDMsg
     = DnDMsg DnDList.Msg
 
 
-type alias DnDInterface =
+type alias DnDAppInterface =
+    { items : List String
+    , itemsUpdated : List String -> ProgMsg
+    }
+
+
+type alias DnDComponentInterface =
     { view : List String -> Html.Html ProgMsg }
+
+
+type alias ComponentInterfaces =
+    { dnd : DnDComponentInterface }
 
 
 fruits : List String
@@ -66,27 +66,32 @@ main :
         ProgModel
         ProgMsg
 main =
-    Composer.Application.app app_
-        |> Composer.Application.component
-            dndList
-            (\toApp appModel ->
-                { items = appModel.fruits
-                , itemsUpdated = toApp << ItemsUpdated
-                }
-            )
+    Browser.application program
+
+
+program :
+    { init : Flags -> Url.Url -> Browser.Navigation.Key -> ( ProgModel, Cmd ProgMsg )
+    , view : ProgModel -> Browser.Document ProgMsg
+    , update : ProgMsg -> ProgModel -> ( ProgModel, Cmd ProgMsg )
+    , subscriptions : ProgModel -> Sub ProgMsg
+    , onUrlRequest : Browser.UrlRequest -> ProgMsg
+    , onUrlChange : Url.Url -> ProgMsg
+    }
+program =
+    Composer.Application.app dndApp
+        |> Composer.Application.component dndComponent makeDndAppInterface
         |> Composer.Application.compose (\dnd -> { dnd = dnd })
-        |> Browser.application
 
 
-app_ :
-    { init : Components -> (AppMsg -> ProgMsg) -> Flags -> Url.Url -> Browser.Navigation.Key -> ( AppModel, Cmd ProgMsg )
-    , view : Components -> (AppMsg -> ProgMsg) -> AppModel -> Browser.Document ProgMsg
-    , update : Components -> (AppMsg -> ProgMsg) -> AppMsg -> AppModel -> ( AppModel, Cmd ProgMsg )
-    , subscriptions : Components -> (AppMsg -> ProgMsg) -> AppModel -> Sub ProgMsg
+dndApp :
+    { init : ComponentInterfaces -> (AppMsg -> ProgMsg) -> Flags -> Url.Url -> Browser.Navigation.Key -> ( AppModel, Cmd ProgMsg )
+    , view : ComponentInterfaces -> (AppMsg -> ProgMsg) -> AppModel -> Browser.Document ProgMsg
+    , update : ComponentInterfaces -> (AppMsg -> ProgMsg) -> AppMsg -> AppModel -> ( AppModel, Cmd ProgMsg )
+    , subscriptions : ComponentInterfaces -> (AppMsg -> ProgMsg) -> AppModel -> Sub ProgMsg
     , onUrlRequest : Browser.UrlRequest -> AppMsg
     , onUrlChange : Url.Url -> AppMsg
     }
-app_ =
+dndApp =
     { init =
         \components toSelf flags url key ->
             ( { fruits = fruits, key = key }, Cmd.none )
@@ -120,13 +125,20 @@ app_ =
     }
 
 
-dndList :
-    { interface : (DnDMsg -> ProgMsg) -> DnDModel -> DnDInterface
-    , init : (DnDMsg -> ProgMsg) -> Flags -> ( DnDModel, Cmd ProgMsg )
-    , update : AppInterface -> (DnDMsg -> ProgMsg) -> DnDMsg -> DnDModel -> ( DnDModel, Cmd ProgMsg )
-    , subscriptions : AppInterface -> (DnDMsg -> ProgMsg) -> DnDModel -> Sub ProgMsg
+makeDndAppInterface : (AppMsg -> ProgMsg) -> AppModel -> DnDAppInterface
+makeDndAppInterface toApp appModel =
+    { items = appModel.fruits
+    , itemsUpdated = toApp << ItemsUpdated
     }
-dndList =
+
+
+dndComponent :
+    { interface : (DnDMsg -> ProgMsg) -> DnDModel -> DnDComponentInterface
+    , init : (DnDMsg -> ProgMsg) -> Flags -> ( DnDModel, Cmd ProgMsg )
+    , update : DnDAppInterface -> (DnDMsg -> ProgMsg) -> DnDMsg -> DnDModel -> ( DnDModel, Cmd ProgMsg )
+    , subscriptions : DnDAppInterface -> (DnDMsg -> ProgMsg) -> DnDModel -> Sub ProgMsg
+    }
+dndComponent =
     { interface =
         \toSelf model ->
             { view = view toSelf model }
