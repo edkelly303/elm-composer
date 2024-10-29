@@ -26,8 +26,8 @@ import Browser
 
 main =
   Composer.Element.app myApp
-    |> Composer.Element.component counter
-    |> Composer.Element.component clock
+    |> Composer.Element.componentSimple counter
+    |> Composer.Element.componentSimple clock
     |> Composer.Element.compose (\counter_ clock_ -> { counter = counter_, clock = clock_ })
     |> Browser.element
 ```
@@ -194,9 +194,9 @@ So far, we've got a component that can provide an interface that controls how ou
 
 But what if we also want the converse: an interface that controls how our component can interact with our main app's model, and specifies what messages it can send to the main app?
 
-This is where `Composer.componentWithRequirements` comes in.
+This is where `Composer.component` comes in.
 
-Under the covers, when we call the simple baby version of `Composer.component`, what's really happening is this:
+Under the covers, when we call `Composer.componentSimple`, what's really happening is this:
 
 ```diff
 import Composer.Element as Composer
@@ -204,11 +204,11 @@ import Browser
 
 main =
   Composer.app app
--    |> Composer.component counter
-+    |> Composer.componentWithRequirements
+-    |> Composer.componentSimple counter
++    |> Composer.component
 +        counter
 +        (\toApp appModel -> ())
-    |> Composer.Element.component clock
+    |> Composer.Element.componentSimple clock
     |> Composer.Element.compose (\counter_ clock_ -> { counter = counter_, clock = clock_ })
     |> Browser.element
 ```
