@@ -1,4 +1,4 @@
-module Composer.Lamdera.Backend exposing (..)
+module Composer.Lamdera.Backend exposing (app, component, compose)
 
 import Composer
 import NestedTuple as NT
@@ -15,14 +15,14 @@ app app_ =
     }
 
 
-componentWithRequirements component appInterface builder =
+component component_ appInterface builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters
-    , initer = NT.folder (initer component.interface component.init) builder.initer
-    , updater = NT.folder3 (Composer.updater appInterface component.interface component.update) builder.updater
-    , updaterFromFrontend = NT.folder2 (updaterFromFrontend appInterface component.interface) builder.updaterFromFrontend
-    , subscriber = NT.folder2 (Composer.subscriber appInterface component.interface component.subscriptions) builder.subscriber
+    , initer = NT.folder (initer component_.interface component_.init) builder.initer
+    , updater = NT.folder3 (Composer.updater appInterface component_.interface component_.update) builder.updater
+    , updaterFromFrontend = NT.folder2 (updaterFromFrontend appInterface component_.interface) builder.updaterFromFrontend
+    , subscriber = NT.folder2 (Composer.subscriber appInterface component_.interface component_.subscriptions) builder.subscriber
     }
 
 

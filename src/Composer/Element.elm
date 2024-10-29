@@ -1,7 +1,7 @@
 module Composer.Element exposing
     ( app
     , component
-    , componentWithRequirements
+    , componentSimple
     , compose
     )
 
@@ -20,11 +20,11 @@ app app_ =
     }
 
 
-component component_ builder =
-    componentWithRequirements component_ (\toApp appModel -> ()) builder
+componentSimple component_ builder =
+    component component_ (\toApp appModel -> ()) builder
 
 
-componentWithRequirements component_ appInterface builder =
+component component_ appInterface builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters

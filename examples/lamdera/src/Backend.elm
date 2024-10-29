@@ -20,7 +20,7 @@ composition =
         , updateFromFrontend = updateFromFrontend
         , subscriptions = subscriptions
         }
-        |> Composer.componentWithRequirements
+        |> Composer.component
             Counter.component
             (\toApp appModel -> { countChanged = toApp << BackendCounterComponentUpdated })
         |> Composer.compose (\c -> { counter = c })

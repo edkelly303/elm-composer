@@ -25,7 +25,7 @@ composition =
         , subscriptions = subscriptions
         , view = view
         }
-        |> Composer.componentWithRequirements
+        |> Composer.component
             Counter.component
             (\toApp appModel -> { countChanged = \_ -> toApp Noop })
         |> Composer.compose
