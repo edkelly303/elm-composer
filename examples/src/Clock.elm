@@ -1,7 +1,7 @@
 module Clock exposing (main)
 
 import Browser
-import Composer.Element as C
+import Composer.Document as C
 import Html
 import Task
 import Time
@@ -9,9 +9,9 @@ import Time
 
 main =
     C.app app_
-        |> C.component clock
+        |> C.componentSimple clock
         |> C.compose (\clock_ -> { clock = clock_ })
-        |> Browser.element
+        |> Browser.document
 
 
 app_ =
@@ -23,13 +23,17 @@ app_ =
             ( (), Cmd.none )
     , view =
         \components toSelf model ->
-            Html.text
-                (String.fromInt components.clock.hours
-                    ++ ":"
-                    ++ String.fromInt components.clock.minutes
-                    ++ ":"
-                    ++ String.fromInt components.clock.seconds
-                )
+            { title = "Clock demo"
+            , body =
+                [ Html.text
+                    (String.fromInt components.clock.hours
+                        ++ ":"
+                        ++ String.fromInt components.clock.minutes
+                        ++ ":"
+                        ++ String.fromInt components.clock.seconds
+                    )
+                ]
+            }
     , subscriptions =
         \components toSelf model ->
             Sub.none
