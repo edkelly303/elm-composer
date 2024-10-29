@@ -1,12 +1,58 @@
 module DnD exposing (main)
 
 import Browser
-import Composer.Element
+import Browser.Navigation
+import Composer.Application
 import DnDList
 import Html
 import Html.Attributes
 import Process
 import Task
+import Url
+
+
+type alias Flags =
+    ()
+
+
+type alias ProgModel =
+    ( AppModel, ( DnDModel, () ) )
+
+
+type alias ProgMsg =
+    ( Maybe AppMsg, ( Maybe DnDMsg, () ) )
+
+
+type alias Components =
+    { dnd : DnDInterface }
+
+
+type alias AppModel =
+    { fruits : List String, key : Browser.Navigation.Key }
+
+
+type AppMsg
+    = ItemsUpdated (List String)
+    | UrlRequested Browser.UrlRequest
+    | UrlChanged Url.Url
+
+
+type alias AppInterface =
+    { items : List String
+    , itemsUpdated : List String -> ProgMsg
+    }
+
+
+type alias DnDModel =
+    { dnd : DnDList.Model }
+
+
+type DnDMsg
+    = DnDMsg DnDList.Msg
+
+
+type alias DnDInterface =
+    { view : List String -> Html.Html ProgMsg }
 
 
 fruits : List String
@@ -14,58 +60,72 @@ fruits =
     [ "Apples", "Bananas", "Cherries", "Dates" ]
 
 
-type alias Components a =
-    { dnd : a }
-
-
 main :
     Program
         ()
-        ( AppModel, ( DnDModel, () ) )
-        ( Maybe AppMsg, ( Maybe DnDMsg, () ) )
+        ProgModel
+        ProgMsg
 main =
-    Composer.Element.app app_
-        |> Composer.Element.componentWithRequirements
+    Composer.Application.app app_
+        |> Composer.Application.component
             dndList
             (\toApp appModel ->
                 { items = appModel.fruits
                 , itemsUpdated = toApp << ItemsUpdated
                 }
             )
-        |> Composer.Element.compose Components
-        |> Browser.element
+        |> Composer.Application.compose (\dnd -> { dnd = dnd })
+        |> Browser.application
 
 
-type alias AppModel =
-    { fruits : List String }
-
-
-type AppMsg
-    = ItemsUpdated (List String)
-
-
+app_ :
+    { init : Components -> (AppMsg -> ProgMsg) -> Flags -> Url.Url -> Browser.Navigation.Key -> ( AppModel, Cmd ProgMsg )
+    , view : Components -> (AppMsg -> ProgMsg) -> AppModel -> Browser.Document ProgMsg
+    , update : Components -> (AppMsg -> ProgMsg) -> AppMsg -> AppModel -> ( AppModel, Cmd ProgMsg )
+    , subscriptions : Components -> (AppMsg -> ProgMsg) -> AppModel -> Sub ProgMsg
+    , onUrlRequest : Browser.UrlRequest -> AppMsg
+    , onUrlChange : Url.Url -> AppMsg
+    }
 app_ =
     { init =
-        \components toSelf flags ->
-            ( { fruits = fruits }, Cmd.none )
+        \components toSelf flags url key ->
+            ( { fruits = fruits, key = key }, Cmd.none )
     , update =
         \components toSelf msg model ->
             case msg of
                 ItemsUpdated fruits_ ->
                     ( { model | fruits = fruits_ }, Cmd.none )
+
+                UrlRequested _ ->
+                    ( model, Cmd.none )
+
+                UrlChanged _ ->
+                    ( model, Cmd.none )
     , view =
         \components toSelf model ->
-            Html.div []
-                [ Html.p [] [ Html.text "This is the view of the `dndList` component:" ]
-                , components.dnd.view model.fruits
-                , Html.p [] [ Html.text "This is a `Debug.toString` of the list of items:" ]
-                , Html.text (Debug.toString model.fruits)
+            { title = "Drag and drop demo"
+            , body =
+                [ Html.div []
+                    [ Html.p [] [ Html.text "This is the view of the `dndList` component:" ]
+                    , components.dnd.view model.fruits
+                    , Html.p [] [ Html.text "This is a `Debug.toString` of the list of items:" ]
+                    , Html.text (Debug.toString model.fruits)
+                    ]
                 ]
+            }
     , subscriptions =
         \components toSelf model -> Sub.none
+    , onUrlRequest = UrlRequested
+    , onUrlChange = UrlChanged
     }
 
 
+dndList :
+    { interface : (DnDMsg -> ProgMsg) -> DnDModel -> DnDInterface
+    , init : (DnDMsg -> ProgMsg) -> Flags -> ( DnDModel, Cmd ProgMsg )
+    , update : AppInterface -> (DnDMsg -> ProgMsg) -> DnDMsg -> DnDModel -> ( DnDModel, Cmd ProgMsg )
+    , subscriptions : AppInterface -> (DnDMsg -> ProgMsg) -> DnDModel -> Sub ProgMsg
+    }
 dndList =
     { interface =
         \toSelf model ->
@@ -112,14 +172,6 @@ config =
 system : DnDList.System String DnDMsg
 system =
     DnDList.create config DnDMsg
-
-
-type alias DnDModel =
-    { dnd : DnDList.Model }
-
-
-type DnDMsg
-    = DnDMsg DnDList.Msg
 
 
 subscriptions : DnDModel -> Sub DnDMsg
