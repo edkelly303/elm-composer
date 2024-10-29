@@ -60,12 +60,12 @@ updater makeAppInterface makeComponentInterface componentUpdate setter maybeThis
 
 viewer makeComponentInterface setter thisComponentModel acc =
     let
-        sendToComponent msg =
+        toComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
         componentInterface =
             makeComponentInterface
-                sendToComponent
+                toComponent
                 thisComponentModel
     in
     { args = acc.args componentInterface
@@ -75,7 +75,7 @@ viewer makeComponentInterface setter thisComponentModel acc =
 
 subscriber makeAppInterface makeComponentInterface componentSubscriptions setter thisComponentModel acc =
     let
-        sendToComponent msg =
+        toComponent msg =
             ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
         toApp msg =
@@ -83,13 +83,13 @@ subscriber makeAppInterface makeComponentInterface componentSubscriptions setter
 
         componentInterface =
             makeComponentInterface
-                sendToComponent
+                toComponent
                 thisComponentModel
 
         componentSubscriptions_ =
             componentSubscriptions
                 (makeAppInterface toApp acc.appModel)
-                sendToComponent
+                toComponent
                 thisComponentModel
     in
     { args = acc.args componentInterface

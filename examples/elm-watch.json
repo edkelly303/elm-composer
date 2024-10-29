@@ -17,6 +17,12 @@
                 "src/DnD.elm"
             ],
             "output": "public/build/dnd.js"
+        },
+        "form-demo": {
+            "inputs": [
+                "src/Form.elm"
+            ],
+            "output": "public/build/form.js"
         }
     },
     "port": 8000,
