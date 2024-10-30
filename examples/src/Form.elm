@@ -1,7 +1,7 @@
 module Form exposing (main)
 
 import Browser
-import Composer.Document
+import Composer.Element
 import Html
 import Html.Attributes
 import Html.Events
@@ -10,28 +10,25 @@ import Time
 
 
 main =
-    Composer.Document.app formApp
-        |> Composer.Document.componentSimple (string)
-        |> Composer.Document.componentSimple (string)
-        |> Composer.Document.compose (\a b -> ())
-        |> Browser.document
+    Composer.Element.app formApp
+        |> Composer.Element.component string (\toApp appModel -> 1)
+        |> Composer.Element.component string (\toApp appModel -> 2)
+        |> Composer.Element.compose (\a b -> ( a, b ))
+        |> Browser.element
 
 
 formApp =
     { init =
-        \() toSelf () ->
+        \( a, b ) toSelf () ->
             ( (), Cmd.none )
     , update =
-        \() toSelf () () ->
+        \( a, b ) toSelf () () ->
             ( (), Cmd.none )
     , view =
-        \() toSelf () ->
-            { title = "Form demo"
-            , body =
-                []
-            }
+        \( a, b ) toSelf () ->
+            Html.text "wooo"
     , subscriptions =
-        \() toSelf () ->
+        \( a, b ) toSelf () ->
             Sub.none
     }
 
@@ -40,19 +37,23 @@ type StringMsg
     = StringChanged String
 
 
-string  =
+string =
     { interface =
         \toSelf () ->
-            ()
+            1
     , init =
         \toSelf () ->
             ( ()
             , Cmd.none
             )
     , update =
-        \() toSelf () () ->
+        \int toSelf () () ->
             ( (), Cmd.none )
     , subscriptions =
-        \() toSelf () ->
+        \int toSelf () ->
+            let
+                _ =
+                    int * 2
+            in
             Sub.none
     }

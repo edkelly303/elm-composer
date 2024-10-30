@@ -12,11 +12,11 @@ type alias Flags =
 
 
 type alias ProgModel =
-    ( AppModel, ( ClockModel, () ) )
+    ( AppModel, ( ClockModel, ( ClockModel, () ) ) )
 
 
 type alias ProgMsg =
-    ( Maybe AppMsg, ( Maybe ClockMsg, () ) )
+    ( Maybe AppMsg, ( Maybe ClockMsg, ( Maybe ClockMsg, () ) ) )
 
 
 type alias AppModel =
@@ -35,6 +35,10 @@ type ClockMsg
     = Tick Time.Posix
 
 
+type alias Components =
+    ( ClockToApp, ClockToApp )
+
+
 type alias ClockToApp =
     { hours : Int, minutes : Int, seconds : Int }
 
@@ -47,38 +51,50 @@ main : Program Flags ProgModel ProgMsg
 main =
     Composer.Document.app clockApp
         |> Composer.Document.componentSimple clockComponent
-        |> Composer.Document.compose identity
+        |> Composer.Document.componentSimple clockComponent
+        |> Composer.Document.compose (\c1 c2 -> ( c1, c2 ))
         |> Browser.document
 
 
 clockApp :
-    { init : ClockToApp -> (AppMsg -> ProgMsg) -> Flags -> ( AppModel, Cmd ProgMsg )
-    , update : ClockToApp -> (AppMsg -> ProgMsg) -> AppMsg -> AppModel -> ( AppModel, Cmd ProgMsg )
-    , view : ClockToApp -> (AppMsg -> ProgMsg) -> AppModel -> Browser.Document ProgMsg
-    , subscriptions : ClockToApp -> (AppMsg -> ProgMsg) -> AppModel -> Sub ProgMsg
+    { init : Components -> (AppMsg -> ProgMsg) -> Flags -> ( AppModel, Cmd ProgMsg )
+    , update : Components -> (AppMsg -> ProgMsg) -> AppMsg -> AppModel -> ( AppModel, Cmd ProgMsg )
+    , view : Components -> (AppMsg -> ProgMsg) -> AppModel -> Browser.Document ProgMsg
+    , subscriptions : Components -> (AppMsg -> ProgMsg) -> AppModel -> Sub ProgMsg
     }
 clockApp =
     { init =
-        \clock toSelf () ->
+        \( c1, c2 ) toSelf () ->
             ( (), Cmd.none )
     , update =
-        \clock toSelf msg model ->
+        \( c1, c2 ) toSelf msg model ->
             ( (), Cmd.none )
     , view =
-        \clock toSelf model ->
+        \( c1, c2 ) toSelf model ->
             { title = "Clock demo"
             , body =
-                [ Html.text
-                    (String.fromInt clock.hours
-                        ++ ":"
-                        ++ String.fromInt clock.minutes
-                        ++ ":"
-                        ++ String.fromInt clock.seconds
-                    )
+                [ Html.div []
+                    [ Html.text
+                        (String.fromInt c1.hours
+                            ++ ":"
+                            ++ String.fromInt c1.minutes
+                            ++ ":"
+                            ++ String.fromInt c1.seconds
+                        )
+                    ]
+                , Html.div []
+                    [ Html.text
+                        (String.fromInt c2.hours
+                            ++ ":"
+                            ++ String.fromInt c2.minutes
+                            ++ ":"
+                            ++ String.fromInt c2.seconds
+                        )
+                    ]
                 ]
             }
     , subscriptions =
-        \clock toSelf model ->
+        \( c1, c2 ) toSelf model ->
             Sub.none
     }
 

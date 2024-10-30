@@ -52,6 +52,7 @@ updater makeAppInterface makeComponentInterface componentUpdate setter maybeThis
                 newThisComponentModel
     in
     { args = acc.args componentInterface
+    , appModel = acc.appModel
     , componentCmdsList = thisCmd :: acc.componentCmdsList
     , newComponentsModel = NT.appender newThisComponentModel acc.newComponentsModel
     , emptyComponentsMsg = acc.emptyComponentsMsg
@@ -93,6 +94,7 @@ subscriber makeAppInterface makeComponentInterface componentSubscriptions setter
                 thisComponentModel
     in
     { args = acc.args componentInterface
+    , appModel = acc.appModel
     , componentSubscriptionsList = componentSubscriptions_ :: acc.componentSubscriptionsList
     , emptyComponentsMsg = acc.emptyComponentsMsg
     }
