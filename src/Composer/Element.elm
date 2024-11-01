@@ -3,7 +3,8 @@ module Composer.Element exposing
     , compose
     , withComponent
     , withElement
-    , withSimpleComponent, withSandbox
+    , withSandbox
+    , withSimpleComponent
     )
 
 import Composer
