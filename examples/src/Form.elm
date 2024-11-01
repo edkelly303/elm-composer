@@ -23,20 +23,39 @@ main =
                 { name = name
                 , age = age
                 , output =
-                    Ok User
-                        |> Result.Extra.andMap name.parsed
-                        |> Result.Extra.andMap age.parsed
+                    pure User
+                        |> andMap name.parsed
+                        |> andMap age.parsed
                 }
             )
         |> Browser.element
 
 
+pure =
+    Ok
+
+
+andMap resArg resCtor =
+    case ( resArg, resCtor ) of
+        ( Ok arg, Ok ctor ) ->
+            Ok (ctor arg)
+
+        ( Ok _, Err errs ) ->
+            Err errs
+
+        ( Err errs, Ok _ ) ->
+            Err errs
+
+        ( Err errs1, Err errs2 ) ->
+            Err (errs2 ++ errs1)
+
+
 formApp =
     { init =
-        \{ name, age } toSelf () ->
+        \{} _ () ->
             ( (), Cmd.none )
     , update =
-        \{ name, age } toSelf () () ->
+        \{} _ () () ->
             ( (), Cmd.none )
     , view =
         \{ name, age, output } toSelf () ->
@@ -49,13 +68,18 @@ formApp =
                     [ Html.text "Submit!" ]
                 ]
     , subscriptions =
-        \{ name, age } toSelf () ->
+        \{} _ () ->
             Sub.none
     }
 
 
 type StringMsg
     = StringChanged String
+
+
+type Status
+    = Intact
+    | Touched
 
 
 string label =
@@ -66,12 +90,12 @@ string label =
             }
     , init =
         \model ->
-            ( { value = "", parsed = Ok "" }
+            ( { value = "", parsed = Ok "", status = Intact }
             , Cmd.none
             )
     , update =
         \(StringChanged str) model ->
-            ( { model | value = str, parsed = Ok str }, Cmd.none )
+            ( { model | value = str, parsed = Ok str, status = Touched }, Cmd.none )
     , subscriptions =
         \model ->
             Sub.none
@@ -86,14 +110,21 @@ int label =
             }
     , init =
         \model ->
-            ( { value = "", parsed = Err "Must be an integer" }
+            ( { value = "", parsed = Err [ "must be an integer" ], status = Intact }
             , Cmd.none
             )
     , update =
         \(StringChanged str) model ->
             ( { model
                 | value = str
-                , parsed = String.toInt str |> Result.fromMaybe "Must be an integer"
+                , parsed =
+                    case String.toInt str of
+                        Just i ->
+                            Ok i
+
+                        Nothing ->
+                            Err [ "must be an integer" ]
+                , status = Touched
               }
             , Cmd.none
             )
@@ -103,15 +134,20 @@ int label =
     }
 
 
-textInputView label { value, parsed } =
+textInputView label { value, parsed, status } =
     let
         ( icon, message ) =
-            case parsed of
-                Ok p ->
-                    ( "✅", "" )
+            case status of
+                Intact ->
+                    ( "", "" )
 
-                Err e ->
-                    ( "🚫 ", e )
+                Touched ->
+                    case parsed of
+                        Ok p ->
+                            ( " ✅", "" )
+
+                        Err e ->
+                            ( " 🚫", String.join "\n" e )
     in
     Html.div []
         [ Html.label []
