@@ -1,4 +1,4 @@
-module Composer.Document exposing (app, component, componentSimple, compose)
+module Composer.Document exposing (app, compose, withComponent, withElement, withSimpleComponent)
 
 import Composer.Element
 
@@ -6,13 +6,17 @@ import Composer.Element
 app =
     Composer.Element.app
 
+withSandbox = Composer.Element.withSandbox
+withElement =
+    Composer.Element.withElement
 
-componentSimple =
-    Composer.Element.componentSimple
+
+withSimpleComponent =
+    Composer.Element.withSimpleComponent
 
 
-component =
-    Composer.Element.component
+withComponent =
+    Composer.Element.withComponent
 
 
 compose =

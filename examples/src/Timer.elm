@@ -21,7 +21,7 @@ main :
         ( Maybe AppMsg, ( Maybe TimerMsg, () ) )
 main =
     Composer.Element.app app_
-        |> Composer.Element.component
+        |> Composer.Element.withComponent
             timerComponent
             (\toApp appModel ->
                 { timerExpired = toApp TimerExpired

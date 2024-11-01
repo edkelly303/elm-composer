@@ -16,8 +16,8 @@ type alias User =
 
 main =
     Composer.Element.app formApp
-        |> Composer.Element.componentSimple (string "Name")
-        |> Composer.Element.componentSimple (int "Age")
+        |> Composer.Element.withSimpleComponent (string "Name")
+        |> Composer.Element.withSimpleComponent (int "Age")
         |> Composer.Element.compose
             (\name age ->
                 { name = name
@@ -61,19 +61,19 @@ type StringMsg
 string label =
     { interface =
         \toSelf model ->
-            { view = textInputView label toSelf model
+            { view = textInputView label model |> Html.map toSelf
             , parsed = model.parsed
             }
     , init =
-        \toSelf model ->
+        \model ->
             ( { value = "", parsed = Ok "" }
             , Cmd.none
             )
     , update =
-        \app toSelf (StringChanged str) model ->
+        \(StringChanged str) model ->
             ( { model | value = str, parsed = Ok str }, Cmd.none )
     , subscriptions =
-        \app toSelf model ->
+        \model ->
             Sub.none
     }
 
@@ -81,16 +81,16 @@ string label =
 int label =
     { interface =
         \toSelf model ->
-            { view = textInputView label toSelf model
+            { view = textInputView label model |> Html.map toSelf
             , parsed = model.parsed
             }
     , init =
-        \toSelf model ->
+        \model ->
             ( { value = "", parsed = Err "Must be an integer" }
             , Cmd.none
             )
     , update =
-        \app toSelf (StringChanged str) model ->
+        \(StringChanged str) model ->
             ( { model
                 | value = str
                 , parsed = String.toInt str |> Result.fromMaybe "Must be an integer"
@@ -98,12 +98,12 @@ int label =
             , Cmd.none
             )
     , subscriptions =
-        \app toSelf model ->
+        \model ->
             Sub.none
     }
 
 
-textInputView label toSelf { value, parsed } =
+textInputView label { value, parsed } =
     let
         ( icon, message ) =
             case parsed of
@@ -118,7 +118,7 @@ textInputView label toSelf { value, parsed } =
             [ Html.strong [] [ Html.text label ]
             , Html.div []
                 [ Html.input
-                    [ Html.Events.onInput (toSelf << StringChanged) ]
+                    [ Html.Events.onInput StringChanged ]
                     [ Html.text value ]
                 , Html.text icon
                 ]

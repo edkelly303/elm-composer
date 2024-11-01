@@ -1,6 +1,7 @@
-module Composer.Application exposing (app, component, componentSimple, compose)
+module Composer.Application exposing (app, compose, withComponent, withElement, withSandbox, withSimpleComponent)
 
 import Composer
+import Html
 import NestedTuple as NT
 
 
@@ -15,11 +16,43 @@ app app_ =
     }
 
 
-componentSimple component_ builder =
-    component component_ (\_ _ -> ()) builder
+withSandbox sandbox builder =
+    let
+        component =
+            { interface = \toSelf model -> sandbox.view model |> Html.map toSelf
+            , init = \toSelf flags -> ( sandbox.init, Cmd.none )
+            , update = \() toSelf msg model -> ( sandbox.update msg model, Cmd.none )
+            , subscriptions = \() toSelf model -> Sub.none
+            }
+    in
+    withComponent component (\toApp appModel -> ()) builder
 
 
-component component_ appInterface builder =
+withElement element builder =
+    let
+        component =
+            { interface = \toSelf model -> element.view model |> Html.map toSelf
+            , init = \toSelf flags -> element.init flags |> Tuple.mapSecond (Cmd.map toSelf)
+            , update = \() toSelf msg model -> element.update msg model |> Tuple.mapSecond (Cmd.map toSelf)
+            , subscriptions = \() toSelf model -> element.subscriptions model |> Sub.map toSelf
+            }
+    in
+    withComponent component (\toApp appModel -> ()) builder
+
+
+withSimpleComponent simpleComponent builder =
+    let
+        component =
+            { interface = \toSelf model -> simpleComponent.interface toSelf model
+            , init = \toSelf flags -> simpleComponent.init flags |> Tuple.mapSecond (Cmd.map toSelf)
+            , update = \() toSelf msg model -> simpleComponent.update msg model |> Tuple.mapSecond (Cmd.map toSelf)
+            , subscriptions = \() toSelf model -> simpleComponent.subscriptions model |> Sub.map toSelf
+            }
+    in
+    withComponent component (\toApp appModel -> ()) builder
+
+
+withComponent component_ appInterface builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters

@@ -79,7 +79,7 @@ program :
     }
 program =
     Composer.Application.app dndApp
-        |> Composer.Application.component dndComponent makeDndAppInterface
+        |> Composer.Application.withComponent dndComponent makeDndAppInterface
         |> Composer.Application.compose (\dnd -> { dnd = dnd })
 
 

@@ -36,7 +36,7 @@ type ClockMsg
 
 
 type alias Components =
-    ( ClockToApp, ClockToApp )
+    ( Html.Html ProgMsg, Html.Html ProgMsg )
 
 
 type alias ClockToApp =
@@ -50,8 +50,8 @@ type alias AppToClock =
 main : Program Flags ProgModel ProgMsg
 main =
     Composer.Document.app clockApp
-        |> Composer.Document.componentSimple clockComponent
-        |> Composer.Document.componentSimple clockComponent
+        |> Composer.Document.withElement clockElement
+        |> Composer.Document.withElement clockElement
         |> Composer.Document.compose (\c1 c2 -> ( c1, c2 ))
         |> Browser.document
 
@@ -73,24 +73,8 @@ clockApp =
         \( c1, c2 ) toSelf model ->
             { title = "Clock demo"
             , body =
-                [ Html.div []
-                    [ Html.text
-                        (String.fromInt c1.hours
-                            ++ ":"
-                            ++ String.fromInt c1.minutes
-                            ++ ":"
-                            ++ String.fromInt c1.seconds
-                        )
-                    ]
-                , Html.div []
-                    [ Html.text
-                        (String.fromInt c2.hours
-                            ++ ":"
-                            ++ String.fromInt c2.minutes
-                            ++ ":"
-                            ++ String.fromInt c2.seconds
-                        )
-                    ]
+                [ Html.div [] [ c1 ]
+                , Html.div [] [ c2 ]
                 ]
             }
     , subscriptions =
@@ -99,28 +83,41 @@ clockApp =
     }
 
 
-clockComponent :
-    { interface : (ClockMsg -> ProgMsg) -> ClockModel -> ClockToApp
-    , init : (ClockMsg -> ProgMsg) -> Flags -> ( ClockModel, Cmd ProgMsg )
-    , update : AppToClock -> (ClockMsg -> ProgMsg) -> ClockMsg -> ClockModel -> ( ClockModel, Cmd ProgMsg )
-    , subscriptions : AppToClock -> (ClockMsg -> ProgMsg) -> ClockModel -> Sub ProgMsg
+clockElement :
+    { view : ClockModel -> Html.Html ClockMsg
+    , init : Flags -> ( ClockModel, Cmd ClockMsg )
+    , update : ClockMsg -> ClockModel -> ( ClockModel, Cmd ClockMsg )
+    , subscriptions : ClockModel -> Sub ClockMsg
     }
-clockComponent =
-    { interface =
-        \toSelf model ->
-            { hours = Time.toHour Time.utc model
-            , minutes = Time.toMinute Time.utc model
-            , seconds = Time.toSecond Time.utc model
-            }
+clockElement =
+    { view =
+        \model ->
+            let
+                hours =
+                    Time.toHour Time.utc model
+
+                minutes =
+                    Time.toMinute Time.utc model
+
+                seconds =
+                    Time.toSecond Time.utc model
+            in
+            Html.text
+                (String.fromInt hours
+                    ++ ":"
+                    ++ String.fromInt minutes
+                    ++ ":"
+                    ++ String.fromInt seconds
+                )
     , init =
-        \toSelf model ->
+        \flags ->
             ( Time.millisToPosix 0
-            , Task.perform (toSelf << Tick) Time.now
+            , Task.perform Tick Time.now
             )
     , update =
-        \() toSelf (Tick now) model ->
+        \(Tick now) model ->
             ( now, Cmd.none )
     , subscriptions =
-        \() toSelf model ->
-            Time.every 1000 (toSelf << Tick)
+        \model ->
+            Time.every 1000 Tick
     }
