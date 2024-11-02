@@ -14,24 +14,145 @@ Compose Elm apps with typed message passing
 | Component handles its own updates           | ❌           | ❌ app's update calls component's update               | ✅              |
 | Component handles its own subscriptions     | ❌           | ❌ app's subscriptions calls component's subscriptions | ✅              |
 | Component generates its own view            | ❌           | ❌ app's view calls component's view                   | ✅ (optional)   |
+| Pure Elm (no ports, no JS, no codegen)      | ✅           | ✅                                                     | ✅              |
+| No functions in Msg or Model                | ✅           | ✅                                                     | ✅              |
+| Framework agnostic (e.g. works with elm-ui) | ✅           | ✅                                                     | ✅              |
 | Easy types                                  | ✅           | 🤔                                                     | 🙈              |
 | Clear Errors                                | ✅           | 🤔                                                     | 🤮              |
 
 
-## elm-composer's solution
+## `elm-composer`'s solution
 
 ```elm
-import Composer.Element
+import Composer.Element exposing (app, withSandbox, withElement, withSimpleComponent, withComponent, compose)
 import Browser
 
 main =
-  Composer.Element.app myApp
-    |> Composer.Element.componentSimple counter
-    |> Composer.Element.componentSimple clock
-    |> Composer.Element.compose (\counter_ clock_ -> { counter = counter_, clock = clock_ })
+  app myApp
+    |> withSandbox counter
+    |> withElement clock
+    |> withSimpleComponent stopwatch
+    |> withComponent timer (\toApp appModel -> { timerExpired = TimerExpired } )
+    |> compose 
+      (\counter_ clock_ stopwatch_ timer_ -> 
+        { counter = counter_
+        , clock = clock_ 
+        , stopwatch = stopwatch_
+        , timer = timer_
+        }
+      )
     |> Browser.element
 ```
 
+### Huh! Ok, talk me through it. What is `myApp` here?
+
+`myApp` is our main application, which we will be integrating various components into. It's going to be a `Browser.element` application, which is why we've imported the `Composer.Element` module here. 
+
+`myApp` should be a record that contains the same four fields that we would usually pass to `Browser.element`: `init`, `update`, `view` and `subscriptions`. But there are a couple of things we'll need to change.
+
+- First, we need to add two extra arguments to `myApp`'s `init`, `update`, `view` and `subscriptions` functions. Let's call those arguments `components` and `toSelf`. For example:
+  ```diff  
+  - init flags = ...
+  + init components toSelf flags = ...
+
+  - update msg model = ...
+  + update components toSelf msg model = ...
+  
+  - view model = ...
+  + view components toSelf model = ...
+  
+  - subscriptions model = ...
+  + subscriptions components toSelf model = ...
+  ```
+- Second, if we want `myApp` to be able to send itself any `Msg`s, we need to wrap those `Msg`s in `toSelf`. For example, in our `init` and `update` functions:
+  ```diff
+  - Task.perform (\now -> TimeUpdated now) Time.now
+  + Task.perform (\now -> toSelf (TimeUpdated now)) Time.now
+  ```
+  In our `view` function:
+  ```diff
+  - Html.Events.onClick Increment
+  + Html.Events.onClick (toSelf Increment)
+  ```
+  And in our `subscriptions` function:
+  ```diff
+  - Time.every 1000 (\now -> TimeUpdated now)
+  + Time.every 1000 (\now -> toSelf (TimeUpdated now))`
+  ```  
+
+### Ok, I'll trust you on `toSelf`... but what's the `components` argument about?
+
+Patience, friend! First, let's put together the simplest possible example of an app with an integrated component.
+
+Here's an app that does absolutely nothing except display "Hello world" in the browser:
+
+```elm
+module Main exposing (main)
+
+import Html
+
+myApp = 
+  { init = 
+      \components toSelf flags -> 
+        ((), Cmd.none)
+  , update = 
+      \components toSelf msg model -> 
+        ((), Cmd.none)
+  , view = 
+      \components toSelf model -> 
+        Html.div [] 
+          [ Html.text "Hello world" ]
+  , subscriptions = 
+      \components toSelf model -> 
+        Sub.none
+  }
+```
+
+We're going to integrate the `Counter` example from the Elm Guide into this app. Imagine we've copy-pasted the code from the Elm Guide into a module called `Counter`.
+
+```elm
+import Counter
+
+counter = 
+  { init = Counter.init
+  , update = Counter.update
+  , view = Counter.view
+  }
+```
+
+Now let's use `elm-composer` to write our `main` function: 
+
+```elm
+import Browser
+import Composer.Element exposing (app, withSandbox, compose)
+
+main = 
+  app myApp
+  |> withSandbox counter
+  |> compose (\counterView -> { counterView = counterView })
+  |> Browser.element
+```
+Now we can run this in `elm reactor` or (even better) `elm-watch`, and we should see... hmmm... just "Hello world" in our browser. What happened to our counter?
+
+Well, we need to do one more bit of wiring to make this work. Let's revisit `myApp`'s `view` function:
+
+```diff
+  , view = 
+      \components toSelf model -> 
+        Html.div [] 
+-         [ Html.text "Hello world" ]
++         [ Html.text "Here's your counter!"
++         , components.counterView
++         ]
+```
+
+Now, we should see the Elm Guide's counter in all its glory!
+
+### Ok, what the heck actually happened there?
+
+
+
+# OLD STUFF
 ### Huh! But what are `counter` and `clock` in that example?
 
 They are components. A component is almost exactly like the record of `init`, `update`, `view` and `subscriptions` functions that you normally pass to `Browser.element`, except that:
