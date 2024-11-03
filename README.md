@@ -84,9 +84,11 @@ main =
 
 Patience, friend! First, let's put together the simplest possible example of an app with an integrated component.
 
-Here's an app that does absolutely nothing except display "Hello world" in the browser:
+Make a file called `Main.elm`, and add the following code::
 
 ```elm
+-- in Main.elm
+
 module Main exposing (main)
 
 import Html
@@ -108,9 +110,21 @@ myApp =
   }
 ```
 
-We're going to integrate the `Counter` example from the Elm Guide into this app. Imagine we've copy-pasted the code from the Elm Guide into a module called `Counter`.
+Yes, that's right, it's an app that does absolutely nothing except display "Hello world" in the browser.
+
+We're going to integrate [the `Counter` example from the Elm Guide](https://guide.elm-lang.org/architecture/buttons) into this app. Imagine we've copy-pasted the code from the Elm Guide into a file called `Counter.elm`, and added a module declaration at the top like this:
 
 ```elm
+-- in Counter.elm
+
+module Counter exposing (init, update, view)
+```
+
+Switch back to our `Main.elm` file, and add this:
+
+```elm
+-- in Main.elm
+
 import Counter
 
 counter = 
@@ -120,9 +134,11 @@ counter =
   }
 ```
 
-Now let's use `elm-composer` to write our `main` function: 
+Now, let's use `elm-composer` to write our `main` function: 
 
 ```elm
+-- in Main.elm
+
 import Browser
 import Composer.Element exposing (app, withSandbox, compose)
 
@@ -132,25 +148,31 @@ main =
   |> compose (\counterView -> { counterView = counterView })
   |> Browser.element
 ```
-Now we can run this in `elm reactor` or (even better) `elm-watch`, and we should see... hmmm... just "Hello world" in our browser. What happened to our counter?
+We can run this in `elm reactor` or (even better) `elm-watch`, and we should see... hmmm... just "Hello world" in our browser. What happened to our counter?
 
 Well, we need to do one more bit of wiring to make this work. Let's revisit `myApp`'s `view` function:
 
 ```diff
-  , view = 
-      \components toSelf model -> 
-        Html.div [] 
--         [ Html.text "Hello world" ]
-+         [ Html.text "Here's your counter!"
-+         , components.counterView
-+         ]
+ -- in Main.elm
+
+   , view = 
+       \components toSelf model -> 
+         Html.div [] 
+-          [ Html.text "Hello world" ]
++          [ Html.text "Here's your counter!"
++          , components.counterView
++          ]
 ```
 
-Now, we should see the Elm Guide's counter in all its glory!
+Ta-daaa! We should see the Elm Guide's counter in all its glory!
 
 ### Ok, what the heck actually happened there?
 
+In our `main` function, we called a function called `compose`. The `compose` function takes the output of our counter component's `view` function (i.e. a value of type `Html Counter.Msg`), converts its `msg` type to a type that is compatible with `elm-composer`, and puts it into a record, under a field called `counterView`.
 
+At runtime, `elm-composer` passes this record into `myApp`s `init`, `update`, `view` and `subscriptions` functions as the first argument, which we've called `components`. 
+
+So, in `myApp`'s `view` function, if we call `components.counterView`, we'll display the output of the counter's  `view` function.
 
 # OLD STUFF
 ### Huh! But what are `counter` and `clock` in that example?
