@@ -24,16 +24,16 @@ Compose Elm apps with typed message passing
 ## `elm-composer`'s solution
 
 ```elm
-import Composer.Element exposing (app, withSandbox, withElement, withSimpleComponent, withComponent, compose)
+import Composer.Element exposing (integrate, withSandbox, withElement, withSimpleComponent, withComponent, groupedAs)
 import Browser
 
 main =
-  app myApp
+  integrate myApp
     |> withSandbox counter
     |> withElement clock
     |> withSimpleComponent stopwatch
     |> withComponent timer (\toApp appModel -> { timerExpired = TimerExpired } )
-    |> compose 
+    |> groupedAs 
       (\counter_ clock_ stopwatch_ timer_ -> 
         { counter = counter_
         , clock = clock_ 
@@ -140,12 +140,12 @@ Now, let's use `elm-composer` to write our `main` function:
 -- in Main.elm
 
 import Browser
-import Composer.Element exposing (app, withSandbox, compose)
+import Composer.Element exposing (integrate, withSandbox, groupedAs)
 
 main = 
-  app myApp
+  integrate myApp
   |> withSandbox counter
-  |> compose (\counterView -> { counterView = counterView })
+  |> groupedAs (\counterView -> { counterView = counterView })
   |> Browser.element
 ```
 We can run this in `elm reactor` or (even better) `elm-watch`, and we should see... hmmm... just "Hello world" in our browser. What happened to our counter?
@@ -168,7 +168,7 @@ Ta-daaa! We should see the Elm Guide's counter in all its glory!
 
 ### Ok, what the heck actually happened there?
 
-In our `main` function, we called a function called `compose`. The `compose` function takes the output of our counter component's `view` function (i.e. a value of type `Html Counter.Msg`), converts its `msg` type to a type that is compatible with `elm-composer`, and puts it into a record, under a field called `counterView`.
+In our `main` function, we called a function called `groupedAs`. The `groupedAs` function takes the output of our counter component's `view` function (i.e. a value of type `Html Counter.Msg`), converts its `msg` type to a type that is compatible with `elm-composer`, and puts it into a record, under a field called `counterView`.
 
 At runtime, `elm-composer` passes this record into `myApp`s `init`, `update`, `view` and `subscriptions` functions as the first argument, which we've called `components`. 
 

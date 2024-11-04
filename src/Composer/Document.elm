@@ -1,10 +1,17 @@
-module Composer.Document exposing (app, compose, withComponent, withElement, withSimpleComponent)
+module Composer.Document exposing
+    ( groupedAs
+    , integrate
+    , withComponent
+    , withElement
+    , withSandbox
+    , withSimpleComponent
+    )
 
 import Composer.Element
 
 
-app =
-    Composer.Element.app
+integrate =
+    Composer.Element.integrate
 
 
 withSandbox =
@@ -23,5 +30,5 @@ withComponent =
     Composer.Element.withComponent
 
 
-compose =
-    Composer.Element.compose
+groupedAs =
+    Composer.Element.groupedAs

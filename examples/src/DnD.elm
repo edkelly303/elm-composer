@@ -78,9 +78,9 @@ program :
     , onUrlChange : Url.Url -> ProgMsg
     }
 program =
-    Composer.Application.app dndApp
+    Composer.Application.integrate dndApp
         |> Composer.Application.withComponent dndComponent makeDndAppInterface
-        |> Composer.Application.compose (\dnd -> { dnd = dnd })
+        |> Composer.Application.groupedAs (\dnd -> { dnd = dnd })
 
 
 dndApp :

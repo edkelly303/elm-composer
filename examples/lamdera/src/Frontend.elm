@@ -16,7 +16,7 @@ app =
 
 
 composition =
-    Composer.app
+    Composer.integrate
         { init = init
         , onUrlRequest = UrlClicked
         , onUrlChange = UrlChanged
@@ -28,7 +28,7 @@ composition =
         |> Composer.withComponent
             Counter.component
             (\toApp appModel -> { countChanged = \_ -> toApp Noop })
-        |> Composer.compose
+        |> Composer.groupedAs
             (\c -> { counter = c })
 
 

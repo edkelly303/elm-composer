@@ -14,7 +14,7 @@ app =
 
 
 composition =
-    Composer.app
+    Composer.integrate
         { init = init
         , update = update
         , updateFromFrontend = updateFromFrontend
@@ -23,7 +23,7 @@ composition =
         |> Composer.withComponent
             Counter.component
             (\toApp appModel -> { countChanged = toApp << BackendCounterComponentUpdated })
-        |> Composer.compose (\c -> { counter = c })
+        |> Composer.groupedAs (\c -> { counter = c })
 
 
 subscriptions counter toSelf model =

@@ -1,11 +1,11 @@
-module Composer.Lamdera.Backend exposing (app, compose, withComponent, withElement, withSandbox, withSimpleComponent)
+module Composer.Lamdera.Backend exposing (integrate, groupedAs, withComponent, withElement, withSandbox, withSimpleComponent)
 
 import Composer
 import Html
 import NestedTuple as NT
 
 
-app app_ =
+integrate app_ =
     { app = app_
     , emptyComponentsMsg = NT.empty
     , setters = NT.defineSetters
@@ -63,7 +63,7 @@ withComponent component appInterface builder =
     }
 
 
-compose ctor builder =
+groupedAs ctor builder =
     let
         setters =
             NT.endSetters builder.setters

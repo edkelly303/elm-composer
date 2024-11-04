@@ -20,7 +20,7 @@ main :
         ( AppModel, ( TimerModel, () ) )
         ( Maybe AppMsg, ( Maybe TimerMsg, () ) )
 main =
-    Composer.Element.app app_
+    Composer.Element.integrate app_
         |> Composer.Element.withComponent
             timerComponent
             (\toApp appModel ->
@@ -28,7 +28,7 @@ main =
                 , timerReset = toApp TimerReset
                 }
             )
-        |> Composer.Element.compose Components
+        |> Composer.Element.groupedAs Components
         |> Browser.element
 
 

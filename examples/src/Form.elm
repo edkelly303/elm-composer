@@ -15,10 +15,10 @@ type alias User =
 
 
 main =
-    Composer.Element.app formApp
+    Composer.Element.integrate formApp
         |> Composer.Element.withSimpleComponent (string "Name")
         |> Composer.Element.withSimpleComponent (int "Age")
-        |> Composer.Element.compose
+        |> Composer.Element.groupedAs
             (\name age ->
                 { name = name
                 , age = age

@@ -49,10 +49,10 @@ type alias AppToClock =
 
 main : Program Flags ProgModel ProgMsg
 main =
-    Composer.Document.app clockApp
+    Composer.Document.integrate clockApp
         |> Composer.Document.withElement clockElement
         |> Composer.Document.withElement clockElement
-        |> Composer.Document.compose (\c1 c2 -> ( c1, c2 ))
+        |> Composer.Document.groupedAs (\c1 c2 -> ( c1, c2 ))
         |> Browser.document
 
 
