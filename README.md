@@ -24,16 +24,16 @@ Compose Elm apps with typed message passing
 ## `elm-composer`'s solution
 
 ```elm
-import Composer.Element exposing (integrate, withSandbox, withElement, withSimpleComponent, withComponent, groupedAs)
+import Composer.Element as CE
 import Browser
 
 main =
-  integrate myApp
-    |> withSandbox counter
-    |> withElement clock
-    |> withSimpleComponent stopwatch
-    |> withComponent timer (\toApp appModel -> { timerExpired = TimerExpired } )
-    |> groupedAs 
+  CE.integrate myApp
+    |> CE.withSandbox counter
+    |> CE.withElement clock
+    |> CE.withSimpleComponent stopwatch
+    |> CE.withComponent timer (\toApp appModel -> { timerExpired = TimerExpired } )
+    |> CE.groupedAs 
       (\counter_ clock_ stopwatch_ timer_ -> 
         { counter = counter_
         , clock = clock_ 
@@ -80,7 +80,7 @@ main =
   + Time.every 1000 (\now -> toSelf (TimeUpdated now))`
   ```  
 
-### Ok, I'll trust you on `toSelf`... but what's the `components` argument about?
+### Hmmm, I'll trust you on `toSelf`... but what's the `components` argument about?
 
 Patience, friend! First, let's put together the simplest possible example of an app with an integrated component.
 
@@ -140,12 +140,12 @@ Now, let's use `elm-composer` to write our `main` function:
 -- in Main.elm
 
 import Browser
-import Composer.Element exposing (integrate, withSandbox, groupedAs)
+import Composer.Element as CE
 
 main = 
-  integrate myApp
-  |> withSandbox counter
-  |> groupedAs 
+  CE.integrate myApp
+  |> CE.withSandbox counter
+  |> CE.groupedAs 
     (\counterView -> 
       { counterView = counterView 
       }
@@ -157,20 +157,22 @@ We can run this in `elm reactor` or (even better) `elm-watch`, and we should see
 Well, we need to do one more bit of wiring to make this work. Let's revisit `myApp`'s `view` function:
 
 ```diff
- -- in Main.elm
+  -- in Main.elm
 
-   , view = 
-       \components toSelf model -> 
-         Html.div [] 
--          [ Html.text "Hello world" ]
-+          [ Html.text "Here's your counter!"
-+          , components.counterView
-+          ]
+  myApp =
+    { ...
+    , view = 
+        \components toSelf model -> 
+          Html.div [] 
+-           [ Html.text "Hello world" ]
++           [ Html.text "Here's your counter!"
++           , components.counterView
++           ]
 ```
 
 Ta-daaa! We should see the Elm Guide's counter in all its glory!
 
-### Ok, what the heck actually happened there?
+### Wait, what the heck actually happened there?
 
 In our `main` function, we called a function called `groupedAs`. The `groupedAs` function takes the output of our counter component's `view` function (i.e. a value of type `Html Counter.Msg`), converts its `msg` type to a type that is compatible with `elm-composer`, and puts it into a record, under a field called `counterView`.
 
@@ -210,33 +212,35 @@ clock =
 ```
 Then add it to our `main` function:
 ```diff
- -- in Main.elm
+  -- in Main.elm
 
-main = 
-  integrate myApp
-  |> withSandbox counter
-+ |> withElement clock
-  |> groupedAs 
--    (\counterView -> 
-+    (\counterView clockView-> 
-       { counterView = counterView 
-+      , clockView = clockView
-       }
-     )
-  |> Browser.element
+  main = 
+    CE.integrate myApp
+    |> CE.withSandbox counter
++   |> CE.withElement clock
+    |> CE.groupedAs 
+-      (\counterView -> 
++      (\counterView clockView-> 
+         { counterView = counterView 
++        , clockView = clockView
+         }
+       )
+    |> Browser.element
 ```
 And update our `view`:
 ```diff
- -- in Main.elm
-
-   , view = 
-       \components toSelf model -> 
-         Html.div [] 
-           [ Html.text "Here's your counter!"
-           , components.counterView
-+          , Html.text "And here's your clock!"
-+          , components.clockView
-           ]
+  -- in Main.elm
+  
+  myApp = 
+    { ...
+    , view = 
+        \components toSelf model -> 
+          Html.div [] 
+            [ Html.text "Here's your counter!"
+            , components.counterView
++           , Html.text "And here's your clock!"
++           , components.clockView
+            ]
 ```
 
 # OLD STUFF
