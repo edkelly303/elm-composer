@@ -145,7 +145,11 @@ import Composer.Element exposing (integrate, withSandbox, groupedAs)
 main = 
   integrate myApp
   |> withSandbox counter
-  |> groupedAs (\counterView -> { counterView = counterView })
+  |> groupedAs 
+    (\counterView -> 
+      { counterView = counterView 
+      }
+    )
   |> Browser.element
 ```
 We can run this in `elm reactor` or (even better) `elm-watch`, and we should see... hmmm... just "Hello world" in our browser. What happened to our counter?
@@ -174,64 +178,68 @@ At runtime, `elm-composer` passes this record into `myApp`s `init`, `update`, `v
 
 So, in `myApp`'s `view` function, if we call `components.counterView`, we'll display the output of the counter's  `view` function.
 
+### Climbing the power curve
+
+Let's recap: we now have a component, `counter`, which is effectively a `Browser.sandbox` program, and it's embedded in our main application, `myApp`.
+
+A `sandbox` is great if we just want a component that manages a little bit of state and provides a little bit of interactivity via HTML events. 
+
+But what if we want to do something a bit more powerful - for example, what if we want a component that can send messages via `Cmd` from its `init` and `update` functions and receive messages via `Sub` in its `subscriptions`?
+
+Well, in a very similar analogy to `elm-browser`, we can create a component that is the equivalent of a `Browser.element`, using the `withElement` function.
+
+Let's integrate [the `Clock` example from the Elm Guide](https://guide.elm-lang.org/effects/time) into this app. Copy-paste the code from the Elm Guide into a file called `Clock.elm`, and add a module declaration at the top like this:
+
+```elm
+-- in Clock.elm
+
+module Clock exposing (init, update, view, subscriptions)
+```
+And then add a new component definition in `Main.elm`:
+```elm
+-- in Main.elm
+
+import Clock
+
+clock = 
+  { init = Clock.init
+  , update = Clock.update
+  , view = Clock.view
+  , subscriptions = Clock.subscriptions
+  }
+```
+Then add it to our `main` function:
+```diff
+ -- in Main.elm
+
+main = 
+  integrate myApp
+  |> withSandbox counter
++ |> withElement clock
+  |> groupedAs 
+-    (\counterView -> 
++    (\counterView clockView-> 
+       { counterView = counterView 
++      , clockView = clockView
+       }
+     )
+  |> Browser.element
+```
+And update our `view`:
+```diff
+ -- in Main.elm
+
+   , view = 
+       \components toSelf model -> 
+         Html.div [] 
+           [ Html.text "Here's your counter!"
+           , components.counterView
++          , Html.text "And here's your clock!"
++          , components.clockView
+           ]
+```
+
 # OLD STUFF
-### Huh! But what are `counter` and `clock` in that example?
-
-They are components. A component is almost exactly like the record of `init`, `update`, `view` and `subscriptions` functions that you normally pass to `Browser.element`, except that:
-
-- You rename the `view` function to `interface` and add an extra `toSelf` argument to it.
-- You add an extra  `toSelf` argument to your `init` function.
-- You add two extra arguments to your `update` and `subscriptions` functions: `app` and `toSelf`.
-- For example:
-  ```diff
-  - view model = ...
-  + interface toSelf model = ...
-  
-  - init flags = ...
-  + init toSelf flags = ...
-
-  - update msg model = ...
-  + update app toSelf msg model = ...
-
-  - subscriptions model = ...
-  + subscriptions app toSelf model = ...
-  ```
-- Any messages that you want your component to send itself need to be wrapped in `toSelf`:
-  ```diff
-  Html
-  - Html.Events.onClick Increment
-  + Html.Events.onClick (toSelf Increment)
-
-  Cmd
-  - Task.perform (\now -> TimeUpdated now) Time.now
-  + Task.perform (\now -> toSelf (TimeUpdated now)) Time.now
-
-  Sub
-  - Time.every 1000 (\now -> TimeUpdated now)
-  + Time.every 1000 (\now -> toSelf (TimeUpdated now))`
-  ```  
-
-
-### Hmm, ok, and what's `myApp`?
-
-`myApp` is your main app. You define your main app by defining the same record of functions that you would pass to a standard `Browser.element`, `Browser.document` or `Browser.application`, except:
-
-- You add two arguments to your main app's `init`, `update`, `view` and `subscriptions` functions: `components` and `toSelf`.
-- For example:
-  ```diff  
-  - init flags = ...
-  + init components toSelf flags = ...
-
-  - update msg model = ...
-  + update components toSelf msg model = ...
-  
-  - view model = ...
-  + view components toSelf model = ...
-  
-  - subscriptions model = ...
-  + subscriptions components toSelf model = ...
-  ```
-- Any messages that you want your main app to send itself need to be wrapped in `toSelf` (as above).
 
 
 ## `view` versus `interface`
