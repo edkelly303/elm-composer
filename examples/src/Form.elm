@@ -5,6 +5,7 @@ import Composer.Element
 import Html
 import Html.Attributes
 import Html.Events
+import Process
 import Result.Extra
 import Task
 import Time
@@ -64,7 +65,8 @@ formApp =
                 , name.view
                 , age.view
                 , Html.button
-                    [ Html.Attributes.disabled (Result.Extra.isErr output) ]
+                    [ Html.Attributes.type_ "button"
+                    ]
                     [ Html.text "Submit!" ]
                 ]
     , subscriptions =
@@ -73,36 +75,45 @@ formApp =
     }
 
 
-type StringMsg
-    = StringChanged String
-
-
-type Status
-    = Intact
-    | Touched
-
-
 string label =
-    { interface =
-        \toSelf model ->
-            { view = textInputView label model |> Html.map toSelf
-            , parsed = model.parsed
-            }
-    , init =
-        \model ->
-            ( { value = "", parsed = Ok "", status = Intact }
-            , Cmd.none
-            )
-    , update =
-        \(StringChanged str) model ->
-            ( { model | value = str, parsed = Ok str, status = Touched }, Cmd.none )
-    , subscriptions =
-        \model ->
-            Sub.none
-    }
+    textInput
+        (\str ->
+            if String.isEmpty str then
+                Err [ "Name must not be blank" ]
+
+            else
+                Ok str
+        )
+        label
 
 
 int label =
+    textInput
+        (\str ->
+            case String.toInt str of
+                Just i ->
+                    Ok i
+
+                Nothing ->
+                    Err [ "Age must be an integer" ]
+        )
+        label
+
+
+type TextInputMsg
+    = StringChanged String
+    | DebounceStarted Time.Posix
+    | DebounceChecked Time.Posix
+
+
+type TextInputStatus
+    = Intact
+    | Touched
+    | Debouncing Time.Posix
+
+
+
+textInput parse label =
     { interface =
         \toSelf model ->
             { view = textInputView label model |> Html.map toSelf
@@ -110,24 +121,42 @@ int label =
             }
     , init =
         \model ->
-            ( { value = "", parsed = Err [ "must be an integer" ], status = Intact }
-            , Cmd.none
-            )
-    , update =
-        \(StringChanged str) model ->
-            ( { model
-                | value = str
-                , parsed =
-                    case String.toInt str of
-                        Just i ->
-                            Ok i
-
-                        Nothing ->
-                            Err [ "must be an integer" ]
-                , status = Touched
+            ( { value = ""
+              , parsed = parse ""
+              , status = Intact
               }
             , Cmd.none
             )
+    , update =
+        \msg model ->
+            case msg of
+                StringChanged str ->
+                    ( { model
+                        | value = str
+                        , parsed = parse str
+                        , status = Touched
+                      }
+                    , Task.perform DebounceStarted Time.now
+                    )
+
+                DebounceStarted now ->
+                    ( { model | status = Debouncing now }
+                    , Task.perform (\() -> DebounceChecked now) (Process.sleep 500)
+                    )
+
+                DebounceChecked now ->
+                    ( case model.status of
+                        Debouncing current ->
+                            if now == current then
+                                { model | status = Touched }
+
+                            else
+                                model
+
+                        _ ->
+                            model
+                    , Cmd.none
+                    )
     , subscriptions =
         \model ->
             Sub.none
@@ -138,9 +167,6 @@ textInputView label { value, parsed, status } =
     let
         ( icon, message ) =
             case status of
-                Intact ->
-                    ( "", "" )
-
                 Touched ->
                     case parsed of
                         Ok p ->
@@ -148,6 +174,9 @@ textInputView label { value, parsed, status } =
 
                         Err e ->
                             ( " 🚫", String.join "\n" e )
+
+                _ ->
+                    ( "", "" )
     in
     Html.div []
         [ Html.label []
