@@ -183,8 +183,9 @@ textInputView label { value, parsed, status } =
             [ Html.strong [] [ Html.text label ]
             , Html.div []
                 [ Html.input
-                    [ Html.Events.onInput StringChanged ]
-                    [ Html.text value ]
+                    [ Html.Events.onInput StringChanged
+                    , Html.Attributes.value value ]
+                    []
                 , Html.text icon
                 ]
             , Html.small [] [ Html.text message ]
