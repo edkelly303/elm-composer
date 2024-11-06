@@ -1,4 +1,4 @@
-module Composer.Lamdera.Backend exposing (integrate, groupedAs, withComponent, withElement, withSandbox, withSimpleComponent)
+module Composer.Lamdera.Backend exposing (groupedAs, integrate, withComponent, withElement, withSandbox, withSimpleComponent)
 
 import Composer
 import Html

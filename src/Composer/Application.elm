@@ -1,6 +1,6 @@
 module Composer.Application exposing
-    ( integrate
-    , groupedAs
+    ( groupedAs
+    , integrate
     , withComponent
     , withElement
     , withSandbox
