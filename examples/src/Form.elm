@@ -170,13 +170,16 @@ textInputView label { value, parsed, status } =
                 Touched ->
                     case parsed of
                         Ok p ->
-                            ( " ✅", "" )
+                            ( "✅", "\u{00A0}" )
 
                         Err e ->
-                            ( " 🚫", String.join "\n" e )
+                            ( "🚫", String.join "\n" e )
 
-                _ ->
-                    ( "", "" )
+                Debouncing _ ->
+                    ( "⌨️", "\u{00A0}" )
+
+                Intact ->
+                    ( "⭐", "\u{00A0}" )
     in
     Html.div []
         [ Html.label []
