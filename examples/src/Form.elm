@@ -39,17 +39,20 @@ pure =
 
 andMap resArg resCtor =
     case ( resArg, resCtor ) of
-        ( Ok arg, Ok ctor ) ->
+        ( Touched (Ok arg), Ok ctor ) ->
             Ok (ctor arg)
 
-        ( Ok _, Err errs ) ->
+        ( Touched (Ok _), Err errs ) ->
             Err errs
 
-        ( Err errs, Ok _ ) ->
+        ( Touched (Err errs), Ok _ ) ->
             Err errs
 
-        ( Err errs1, Err errs2 ) ->
+        ( Touched (Err errs1), Err errs2 ) ->
             Err (errs2 ++ errs1)
+
+        ( _, _ ) ->
+            Err []
 
 
 type AppMsg
@@ -92,7 +95,7 @@ formApp =
                     , Cmd.none
                     )
     , view =
-        \{ name, age, output } toSelf model ->
+        \{ name, age } toSelf model ->
             case model of
                 FormActive ->
                     Html.form []
@@ -158,17 +161,16 @@ type TextInputMsg
     | DebounceChecked Time.Posix
 
 
-type TextInputStatus
+type TextInputStatus parsed
     = Intact
-    | Touched
     | Debouncing Time.Posix
+    | Touched (Result (List String) parsed)
 
 
 textInput parse label =
     let
         init =
             ( { value = ""
-              , parsed = parse ""
               , status = Intact
               }
             , Cmd.none
@@ -177,7 +179,7 @@ textInput parse label =
     { interface =
         \toSelf model ->
             { view = textInputView label model |> Html.map toSelf
-            , parsed = model.parsed
+            , parsed = model.status
             , touch = toSelf Touch
             , reset = toSelf Reset
             }
@@ -188,10 +190,7 @@ textInput parse label =
         \msg model ->
             case msg of
                 StringChanged str ->
-                    ( { model
-                        | value = str
-                        , parsed = parse str
-                      }
+                    ( { model | value = str }
                     , Task.perform DebounceStarted Time.now
                     )
 
@@ -199,7 +198,17 @@ textInput parse label =
                     init
 
                 Touch ->
-                    ( { model | status = Touched }, Cmd.none )
+                    ( { model
+                        | status =
+                            case model.status of
+                                Touched _ ->
+                                    model.status
+
+                                _ ->
+                                    Touched (parse model.value)
+                      }
+                    , Cmd.none
+                    )
 
                 DebounceStarted now ->
                     ( { model | status = Debouncing now }
@@ -210,7 +219,7 @@ textInput parse label =
                     ( case model.status of
                         Debouncing current ->
                             if now == current then
-                                { model | status = Touched }
+                                { model | status = Touched (parse model.value) }
 
                             else
                                 model
@@ -225,20 +234,23 @@ textInput parse label =
     }
 
 
-textInputView label { value, parsed, status } =
+textInputView label { value, status } =
     let
         ( icon, message ) =
             case status of
-                Touched ->
+                Intact ->
+                    ( "", "")
+
+                Touched parsed ->
                     case parsed of
                         Ok p ->
-                            ( " ✅", "" )
+                            ( " ✅", "")
 
                         Err e ->
                             ( " 🚫", String.join "\n" e )
 
-                _ ->
-                    ( "", "" )
+                Debouncing _ ->
+                    ( " ⌨️", "" )
     in
     Html.div []
         [ Html.label []
