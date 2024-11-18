@@ -73,7 +73,10 @@ formApp =
                     case output of
                         Ok user ->
                             ( Success user
-                            , Cmd.none
+                            , Cmd.batch
+                                [ send name.reset
+                                , send age.reset
+                                ]
                             )
 
                         Err _ ->
@@ -86,10 +89,7 @@ formApp =
 
                 BackClicked ->
                     ( FormActive
-                    , Cmd.batch
-                        [ send name.reset
-                        , send age.reset
-                        ]
+                    , Cmd.none
                     )
     , view =
         \{ name, age, output } toSelf model ->
