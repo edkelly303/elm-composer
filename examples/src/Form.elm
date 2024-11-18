@@ -5,6 +5,7 @@ import Composer.Element
 import Html
 import Html.Attributes
 import Html.Events
+import NestedTuple as NT
 import Process
 import Result.Extra
 import Task
@@ -51,28 +52,77 @@ andMap resArg resCtor =
             Err (errs2 ++ errs1)
 
 
+type AppMsg
+    = SubmitClicked
+    | BackClicked
+
+
+type AppModel
+    = FormActive
+    | Success User
+
+
 formApp =
     { init =
         \{} _ () ->
-            ( (), Cmd.none )
+            ( FormActive, Cmd.none )
     , update =
-        \{} _ () () ->
-            ( (), Cmd.none )
+        \{ name, age, output } _ msg model ->
+            case msg of
+                SubmitClicked ->
+                    case output of
+                        Ok user ->
+                            ( Success user
+                            , Cmd.none
+                            )
+
+                        Err _ ->
+                            ( FormActive
+                            , Cmd.batch
+                                [ send name.touch
+                                , send age.touch
+                                ]
+                            )
+
+                BackClicked ->
+                    ( FormActive
+                    , Cmd.batch
+                        [ send name.reset
+                        , send age.reset
+                        ]
+                    )
     , view =
-        \{ name, age, output } toSelf () ->
-            Html.form []
-                [ Html.h1 [] [ Html.text "Create a user" ]
-                , name.view
-                , age.view
-                , Html.button
-                    [ Html.Attributes.type_ "button"
-                    ]
-                    [ Html.text "Submit!" ]
-                ]
+        \{ name, age, output } toSelf model ->
+            case model of
+                FormActive ->
+                    Html.form []
+                        [ Html.h1 [] [ Html.text "Create a user" ]
+                        , name.view
+                        , age.view
+                        , Html.button
+                            [ Html.Attributes.type_ "button"
+                            , Html.Events.onClick (toSelf SubmitClicked)
+                            ]
+                            [ Html.text "Submit!" ]
+                        ]
+
+                Success user ->
+                    Html.div []
+                        [ Html.text ("Hello " ++ user.name)
+                        , Html.button
+                            [ Html.Attributes.type_ "button"
+                            , Html.Events.onClick (toSelf BackClicked)
+                            ]
+                            [ Html.text "Go back!" ]
+                        ]
     , subscriptions =
-        \{} _ () ->
+        \{} _ model ->
             Sub.none
     }
+
+
+send msg =
+    Task.perform identity (Task.succeed msg)
 
 
 string label =
@@ -102,6 +152,8 @@ int label =
 
 type TextInputMsg
     = StringChanged String
+    | Touch
+    | Reset
     | DebounceStarted Time.Posix
     | DebounceChecked Time.Posix
 
@@ -112,21 +164,26 @@ type TextInputStatus
     | Debouncing Time.Posix
 
 
-
 textInput parse label =
-    { interface =
-        \toSelf model ->
-            { view = textInputView label model |> Html.map toSelf
-            , parsed = model.parsed
-            }
-    , init =
-        \model ->
+    let
+        init =
             ( { value = ""
               , parsed = parse ""
               , status = Intact
               }
             , Cmd.none
             )
+    in
+    { interface =
+        \toSelf model ->
+            { view = textInputView label model |> Html.map toSelf
+            , parsed = model.parsed
+            , touch = toSelf Touch
+            , reset = toSelf Reset
+            }
+    , init =
+        \flags ->
+            init
     , update =
         \msg model ->
             case msg of
@@ -134,10 +191,15 @@ textInput parse label =
                     ( { model
                         | value = str
                         , parsed = parse str
-                        , status = Touched
                       }
                     , Task.perform DebounceStarted Time.now
                     )
+
+                Reset ->
+                    init
+
+                Touch ->
+                    ( { model | status = Touched }, Cmd.none )
 
                 DebounceStarted now ->
                     ( { model | status = Debouncing now }
@@ -170,16 +232,13 @@ textInputView label { value, parsed, status } =
                 Touched ->
                     case parsed of
                         Ok p ->
-                            ( "✅", "\u{00A0}" )
+                            ( " ✅", "" )
 
                         Err e ->
-                            ( "🚫", String.join "\n" e )
+                            ( " 🚫", String.join "\n" e )
 
-                Debouncing _ ->
-                    ( "⌨️", "\u{00A0}" )
-
-                Intact ->
-                    ( "⭐", "\u{00A0}" )
+                _ ->
+                    ( "", "" )
     in
     Html.div []
         [ Html.label []
@@ -187,7 +246,8 @@ textInputView label { value, parsed, status } =
             , Html.div []
                 [ Html.input
                     [ Html.Events.onInput StringChanged
-                    , Html.Attributes.value value ]
+                    , Html.Attributes.value value
+                    ]
                     []
                 , Html.text icon
                 ]
