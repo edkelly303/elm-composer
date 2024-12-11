@@ -13,21 +13,19 @@ import Time
 
 
 type alias User =
-    { name : String, age : Int }
+    { name : String, age : Int, cool : Bool }
 
 
 main =
     Composer.Element.integrate formApp
         |> Composer.Element.withSimpleComponent (string "Name")
         |> Composer.Element.withSimpleComponent (int "Age")
+        |> Composer.Element.withSimpleComponent (bool "Is cool?")
         |> Composer.Element.groupedAs
-            (\name age ->
+            (\name age cool ->
                 { name = name
                 , age = age
-                , output =
-                    pure User
-                        |> andMap name.parsed
-                        |> andMap age.parsed
+                , cool = cool
                 }
             )
         |> Browser.element
@@ -70,15 +68,21 @@ formApp =
         \{} _ () ->
             ( FormActive, Cmd.none )
     , update =
-        \{ name, age, output } _ msg model ->
+        \{ name, age, cool } _ msg model ->
             case msg of
                 SubmitClicked ->
-                    case output of
+                    case
+                        pure User
+                            |> andMap name.parsed
+                            |> andMap age.parsed
+                            |> andMap cool.parsed
+                    of
                         Ok user ->
                             ( Success user
                             , Cmd.batch
                                 [ send name.reset
                                 , send age.reset
+                                , send cool.reset
                                 ]
                             )
 
@@ -95,13 +99,14 @@ formApp =
                     , Cmd.none
                     )
     , view =
-        \{ name, age } toSelf model ->
+        \{ name, age, cool } toSelf model ->
             case model of
                 FormActive ->
                     Html.form []
                         [ Html.h1 [] [ Html.text "Create a user" ]
                         , name.view
                         , age.view
+                        , cool.view
                         , Html.button
                             [ Html.Attributes.type_ "button"
                             , Html.Events.onClick (toSelf SubmitClicked)
@@ -165,6 +170,66 @@ type TextInputStatus parsed
     = Intact
     | Debouncing Time.Posix
     | Touched (Result (List String) parsed)
+
+select label = 
+    { interface =
+        \toSelf model ->
+            { view =
+                Html.div []
+                    [ Html.label []
+                        [ Html.strong [] [ Html.text label ]
+                        , Html.input
+                            [ Html.Attributes.type_ "radio"
+                            , Html.Attributes.name "radio"
+                            , Html.Attributes.checked model
+                            , Html.Events.onCheck (\_ -> toSelf (not model))
+                            ]
+                            []
+                        ]
+                    ]
+            , parsed = Touched (Ok model)
+            , reset = toSelf False
+            }
+    , init =
+        \flags ->
+            ( Nothing, Cmd.none )
+    , update =
+        \app msg model ->
+            ( msg, Cmd.none )
+    , subscriptions =
+        \app model ->
+            Sub.none
+    }
+
+
+bool label =
+    { interface =
+        \toSelf model ->
+            { view =
+                Html.div []
+                    [ Html.label []
+                        [ Html.strong [] [ Html.text label ]
+                        , Html.input
+                            [ Html.Attributes.type_ "checkbox"
+                            , Html.Attributes.checked model
+                            , Html.Events.onCheck (\_ -> toSelf (not model))
+                            ]
+                            []
+                        ]
+                    ]
+            , parsed = Touched (Ok model)
+            , reset = toSelf False
+            }
+    , init =
+        \flags ->
+            ( False, Cmd.none )
+    , update =
+        \msg model ->
+            ( msg, Cmd.none )
+    , subscriptions =
+        \model ->
+            Sub.none
+    }
 
 
 textInput parse label =
@@ -239,12 +304,12 @@ textInputView label { value, status } =
         ( icon, message ) =
             case status of
                 Intact ->
-                    ( "", "")
+                    ( "", "" )
 
                 Touched parsed ->
                     case parsed of
                         Ok p ->
-                            ( " ✅", "")
+                            ( " ✅", "" )
 
                         Err e ->
                             ( " 🚫", String.join "\n" e )
