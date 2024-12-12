@@ -55,7 +55,10 @@ andMap statusArg resCtor =
         ( Touched (Err errs1), Err errs2 ) ->
             Err (errs2 ++ errs1)
 
-        ( _, _ ) ->
+        ( _, Err errs ) ->
+            Err errs
+
+        ( _, Ok _ ) ->
             Err []
 
 
@@ -101,35 +104,37 @@ type AppMsg
 
 
 type AppModel
-    = FormActive (List ( String, String ))
+    = FormActive
     | Success User
 
 
 formApp =
+    let
+        validate name age cool pet =
+            pure (\n { a, c } p -> User n a c p)
+                |> andMap name.parsed
+                |> andMap
+                    (andThen2
+                        (\a c ->
+                            if c && a > 40 then
+                                Err [ ( "Is cool?", String.fromInt a ++ " is too old to be cool" ) ]
+
+                            else
+                                Ok { a = a, c = c }
+                        )
+                        age.parsed
+                        cool.parsed
+                    )
+                |> andMap pet.parsed
+    in
     { init =
         \{} _ () ->
-            ( FormActive [], Cmd.none )
+            ( FormActive, Cmd.none )
     , update =
         \{ name, age, cool, pet } _ msg model ->
             case msg of
                 SubmitClicked ->
-                    case
-                        pure (\n { a, c } p -> User n a c p)
-                            |> andMap name.parsed
-                            |> andMap
-                                (andThen2
-                                    (\a c ->
-                                        if c && a > 40 then
-                                            Err [ ( "Is cool?", String.fromInt a ++ " is too old to be cool" ) ]
-
-                                        else
-                                            Ok { a = a, c = c }
-                                    )
-                                    age.parsed
-                                    cool.parsed
-                                )
-                            |> andMap pet.parsed
-                    of
+                    case validate name age cool pet of
                         Ok user ->
                             ( Success user
                             , Cmd.batch
@@ -141,7 +146,7 @@ formApp =
                             )
 
                         Err errs ->
-                            ( FormActive errs
+                            ( FormActive
                             , Cmd.batch
                                 [ send name.touch
                                 , send age.touch
@@ -150,13 +155,22 @@ formApp =
                             )
 
                 BackClicked ->
-                    ( FormActive []
+                    ( FormActive
                     , Cmd.none
                     )
     , view =
         \{ name, age, cool, pet } toSelf model ->
             case model of
-                FormActive errs ->
+                FormActive ->
+                    let
+                        errs =
+                            case validate name age cool pet of
+                                Err errs_ ->
+                                    errs_
+
+                                Ok _ ->
+                                    []
+                    in
                     Html.form []
                         [ Html.h1 [] [ Html.text "Create a user" ]
                         , name.view errs
