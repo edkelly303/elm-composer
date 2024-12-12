@@ -12,15 +12,73 @@ import Task
 import Time
 
 
+main : Program () ProgModel ProgMsg
+main =
+    Browser.element
+        { init =
+            \flags ->
+                form.init ()
+                    |> Tuple.mapSecond (Cmd.map FormMsg)
+        , update =
+            \msg model ->
+                case msg of
+                    FormMsg formMsg ->
+                        let
+                            fireTheMissiles =
+                                case formMsg of
+                                    ( Just (PetUpdated maybePetId), _ ) ->
+                                        Cmd.none
+
+                                    _ ->
+                                        Cmd.none
+
+                            ( formModel, formCmd ) =
+                                form.update formMsg model
+                        in
+                        ( formModel
+                        , Cmd.batch
+                            [ fireTheMissiles
+                            , Cmd.map FormMsg formCmd
+                            ]
+                        )
+        , view = form.view >> Html.map FormMsg
+        , subscriptions = form.subscriptions >> Sub.map FormMsg
+        }
+
+
+type ProgMsg
+    = FormMsg FormMsg
+
+
+type alias ProgModel =
+    ( AppModel
+    , ( { status : InputStatus String, value : String }
+      , ( { status : InputStatus Int, value : String }
+        , ( Bool
+          , ( { status : InputStatus Int, value : Maybe Int }, () )
+          )
+        )
+      )
+    )
+
+
 type alias User =
     { name : String, age : Int, cool : Bool, petId : Int }
 
 
-type alias Pet =
-    { id : Int, name : String }
+type alias FormMsg =
+    ( Maybe AppMsg
+    , ( Maybe TextInputMsg
+      , ( Maybe TextInputMsg
+        , ( Maybe Bool
+          , ( Maybe (SelectInputMsg Int), () )
+          )
+        )
+      )
+    )
 
 
-main =
+form =
     Composer.Element.integrate formApp
         |> Composer.Element.withSimpleComponent (string "Name")
         |> Composer.Element.withSimpleComponent (int "Age")
@@ -36,7 +94,6 @@ main =
                 , pet = pet
                 }
             )
-        |> Browser.element
 
 
 succeed =
