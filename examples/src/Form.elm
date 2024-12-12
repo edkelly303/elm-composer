@@ -7,6 +7,8 @@ import Dict exposing (Dict)
 import Html
 import Html.Attributes
 import Html.Events
+import Http
+import Json.Decode as JD
 import Process
 import Task
 import Time
@@ -22,12 +24,37 @@ main =
         , update =
             \msg model ->
                 case msg of
+                    ToysLoaded (Ok toys) ->
+                        let
+                            ( appModel, restModels ) =
+                                model
+                        in
+                        ( ( { appModel | toys = toys }, restModels )
+                        , Cmd.none
+                        )
+
+                    ToysLoaded (Err e) ->
+                        let
+                            _ =
+                                Debug.log "request failed" e
+                        in
+                        ( model
+                        , Cmd.none
+                        )
+
                     FormMsg formMsg ->
                         let
-                            fireTheMissiles =
+                            requestToys =
                                 case formMsg of
-                                    ( Just (PetUpdated maybePetId), _ ) ->
-                                        Cmd.none
+                                    ( Just (PetUpdated (Just petId)), _ ) ->
+                                        Http.get
+                                            { expect =
+                                                Http.expectString
+                                                    (\_ ->
+                                                        ToysLoaded (Ok (List.filter (\toy -> toy.petId == petId) petToys))
+                                                    )
+                                            , url = "http://localhost:8000/clock.html"
+                                            }
 
                                     _ ->
                                         Cmd.none
@@ -37,7 +64,7 @@ main =
                         in
                         ( formModel
                         , Cmd.batch
-                            [ fireTheMissiles
+                            [ requestToys
                             , Cmd.map FormMsg formCmd
                             ]
                         )
@@ -48,6 +75,7 @@ main =
 
 type ProgMsg
     = FormMsg FormMsg
+    | ToysLoaded (Result Http.Error (List PetToy))
 
 
 type alias ProgModel =
@@ -55,7 +83,11 @@ type alias ProgModel =
     , ( { status : InputStatus String, value : String }
       , ( { status : InputStatus Int, value : String }
         , ( Bool
-          , ( { status : InputStatus Int, value : Maybe Int }, () )
+          , ( { status : InputStatus Int, value : Maybe Int }
+            , ( { status : InputStatus Int, value : Maybe Int }
+              , ()
+              )
+            )
           )
         )
       )
@@ -63,7 +95,31 @@ type alias ProgModel =
 
 
 type alias User =
-    { name : String, age : Int, cool : Bool, petId : Int }
+    { name : String, age : Int, cool : Bool, petId : Int, toyId : Int }
+
+
+type alias Pet =
+    { name : String, id : Int }
+
+
+pets : List Pet
+pets =
+    [ { id = 1, name = "Fido" }
+    , { id = 2, name = "Miaowcus" }
+    ]
+
+
+type alias PetToy =
+    { id : Int, name : String, petId : Int }
+
+
+petToys : List PetToy
+petToys =
+    [ { id = 1, name = "ball of string", petId = 2 }
+    , { id = 2, name = "scratching post", petId = 2 }
+    , { id = 3, name = "bone", petId = 1 }
+    , { id = 4, name = "fluffy penguin", petId = 1 }
+    ]
 
 
 type alias FormMsg =
@@ -71,7 +127,11 @@ type alias FormMsg =
     , ( Maybe TextInputMsg
       , ( Maybe TextInputMsg
         , ( Maybe Bool
-          , ( Maybe (SelectInputMsg Int), () )
+          , ( Maybe (SelectInputMsg Int)
+            , ( Maybe (SelectInputMsg Int)
+              , ()
+              )
+            )
           )
         )
       )
@@ -85,13 +145,17 @@ form =
         |> Composer.Element.withSimpleComponent (bool "Is cool?")
         |> Composer.Element.withComponent
             (select "Pet")
-            (\toApp _ -> { petUpdated = \maybePetId -> toApp (PetUpdated maybePetId) })
+            (\toApp _ -> { selectionUpdated = \maybePetId -> toApp (PetUpdated maybePetId) })
+        |> Composer.Element.withComponent
+            (select "Toy")
+            (\toApp _ -> { selectionUpdated = \maybeToyId -> toApp (ToyUpdated maybeToyId) })
         |> Composer.Element.groupedAs
-            (\name age cool pet ->
+            (\name age cool pet toy ->
                 { name = name
                 , age = age
                 , cool = cool
                 , pet = pet
+                , toy = toy
                 }
             )
 
@@ -143,19 +207,27 @@ type AppMsg
     = SubmitClicked
     | BackClicked
     | PetUpdated (Maybe Int)
+    | ToyUpdated (Maybe Int)
 
 
-type AppModel
+type alias AppModel =
+    { page : AppPage
+    , pets : List Pet
+    , toys : List PetToy
+    }
+
+
+type AppPage
     = FormActive
     | Success User
 
 
 formApp =
     let
-        validate name age cool pet =
+        validate name age cool pet toy =
             succeed
-                (\name_ { age_, cool_ } pet_ ->
-                    User name_ age_ cool_ pet_
+                (\name_ { age_, cool_ } pet_ toy_ ->
+                    User name_ age_ cool_ pet_ toy_
                 )
                 |> check name.parsed
                 |> check
@@ -171,17 +243,18 @@ formApp =
                         cool.parsed
                     )
                 |> check pet.parsed
+                |> check toy.parsed
     in
     { init =
         \{} _ () ->
-            ( FormActive, Cmd.none )
+            ( { page = FormActive, pets = pets, toys = [] }, Cmd.none )
     , update =
-        \{ name, age, cool, pet } _ msg model ->
+        \{ name, age, cool, pet, toy } _ msg model ->
             case msg of
                 SubmitClicked ->
-                    case validate name age cool pet of
+                    case validate name age cool pet toy of
                         Ok user ->
-                            ( Success user
+                            ( { model | page = Success user }
                             , Cmd.batch
                                 [ send name.reset
                                 , send age.reset
@@ -191,7 +264,7 @@ formApp =
                             )
 
                         Err _ ->
-                            ( FormActive
+                            ( { model | page = FormActive }
                             , Cmd.batch
                                 [ send name.touch
                                 , send age.touch
@@ -200,23 +273,30 @@ formApp =
                             )
 
                 BackClicked ->
-                    ( FormActive
+                    ( { model | page = FormActive }
                     , Cmd.none
                     )
 
                 PetUpdated maybePetId ->
                     let
                         _ =
-                            Debug.log "Id changed" maybePetId
+                            Debug.log "Pet id changed" maybePetId
+                    in
+                    ( model, Cmd.none )
+
+                ToyUpdated maybeToyId ->
+                    let
+                        _ =
+                            Debug.log "Toy id changed" maybeToyId
                     in
                     ( model, Cmd.none )
     , view =
-        \{ name, age, cool, pet } toSelf model ->
-            case model of
+        \{ name, age, cool, pet, toy } toSelf model ->
+            case model.page of
                 FormActive ->
                     let
                         errors =
-                            case validate name age cool pet of
+                            case validate name age cool pet toy of
                                 Err errs_ ->
                                     errs_
 
@@ -231,10 +311,13 @@ formApp =
                         , pet.view
                             { toId = .id
                             , toHtml = .name >> Html.text
-                            , items =
-                                [ { id = 1, name = "Fido" }
-                                , { id = 2, name = "Miaowcus" }
-                                ]
+                            , items = model.pets
+                            , errors = errors
+                            }
+                        , toy.view
+                            { toId = .id
+                            , toHtml = .name >> Html.text
+                            , items = model.toys
                             , errors = errors
                             }
                         , Html.button
@@ -379,7 +462,7 @@ select label =
             case msg of
                 Select_Selected selection ->
                     ( { model | value = selection, status = parse selection }
-                    , send (app.petUpdated selection)
+                    , send (app.selectionUpdated selection)
                     )
 
                 Select_Touch ->
