@@ -3,6 +3,7 @@ module Form exposing (main)
 import Browser
 import Composer exposing (view)
 import Composer.Element
+import Dict exposing (Dict)
 import Html
 import Html.Attributes
 import Html.Events
@@ -40,8 +41,8 @@ pure =
     Ok
 
 
-andMap resArg resCtor =
-    case ( resArg, resCtor ) of
+andMap statusArg resCtor =
+    case ( statusArg, resCtor ) of
         ( Touched (Ok arg), Ok ctor ) ->
             Ok (ctor arg)
 
@@ -58,29 +59,75 @@ andMap resArg resCtor =
             Err []
 
 
+map2 f status1 status2 =
+    case ( status1, status2 ) of
+        ( Touched (Ok arg1), Touched (Ok arg2) ) ->
+            Touched (Ok (f arg1 arg2))
+
+        ( Touched (Ok _), Touched (Err errs) ) ->
+            Touched (Err errs)
+
+        ( Touched (Err errs), Touched (Ok _) ) ->
+            Touched (Err errs)
+
+        ( Touched (Err errs1), Touched (Err errs2) ) ->
+            Touched (Err (errs2 ++ errs1))
+
+        ( _, _ ) ->
+            Touched (Err [])
+
+
+andThen2 f status1 status2 =
+    case ( status1, status2 ) of
+        ( Touched (Ok arg1), Touched (Ok arg2) ) ->
+            Touched (f arg1 arg2)
+
+        ( Touched (Ok _), Touched (Err errs) ) ->
+            Touched (Err errs)
+
+        ( Touched (Err errs), Touched (Ok _) ) ->
+            Touched (Err errs)
+
+        ( Touched (Err errs1), Touched (Err errs2) ) ->
+            Touched (Err (errs2 ++ errs1))
+
+        ( _, _ ) ->
+            Touched (Err [])
+
+
 type AppMsg
     = SubmitClicked
     | BackClicked
 
 
 type AppModel
-    = FormActive
+    = FormActive (List ( String, String ))
     | Success User
 
 
 formApp =
     { init =
         \{} _ () ->
-            ( FormActive, Cmd.none )
+            ( FormActive [], Cmd.none )
     , update =
         \{ name, age, cool, pet } _ msg model ->
             case msg of
                 SubmitClicked ->
                     case
-                        pure User
+                        pure (\n { a, c } p -> User n a c p)
                             |> andMap name.parsed
-                            |> andMap age.parsed
-                            |> andMap cool.parsed
+                            |> andMap
+                                (andThen2
+                                    (\a c ->
+                                        if c && a > 40 then
+                                            Err [ ( "Is cool?", String.fromInt a ++ " is too old to be cool" ) ]
+
+                                        else
+                                            Ok { a = a, c = c }
+                                    )
+                                    age.parsed
+                                    cool.parsed
+                                )
                             |> andMap pet.parsed
                     of
                         Ok user ->
@@ -93,8 +140,8 @@ formApp =
                                 ]
                             )
 
-                        Err _ ->
-                            ( FormActive
+                        Err errs ->
+                            ( FormActive errs
                             , Cmd.batch
                                 [ send name.touch
                                 , send age.touch
@@ -103,22 +150,23 @@ formApp =
                             )
 
                 BackClicked ->
-                    ( FormActive
+                    ( FormActive []
                     , Cmd.none
                     )
     , view =
         \{ name, age, cool, pet } toSelf model ->
             case model of
-                FormActive ->
+                FormActive errs ->
                     Html.form []
                         [ Html.h1 [] [ Html.text "Create a user" ]
-                        , name.view
-                        , age.view
-                        , cool.view
+                        , name.view errs
+                        , age.view errs
+                        , cool.view errs
                         , pet.view
                             .id
                             (\pet_ -> Html.text pet_.name)
                             [ { id = 1, name = "Fido" }, { id = 2, name = "Miaowcus" } ]
+                            errs
                         , Html.button
                             [ Html.Attributes.type_ "button"
                             , Html.Events.onClick (toSelf SubmitClicked)
@@ -149,7 +197,7 @@ string label =
     textInput
         (\str ->
             if String.isEmpty str then
-                Err [ "Name must not be blank" ]
+                Err [ ( label, "Name must not be blank" ) ]
 
             else
                 Ok str
@@ -165,7 +213,7 @@ int label =
                     Ok i
 
                 Nothing ->
-                    Err [ "Age must be an integer" ]
+                    Err [ ( label, "Age must be an integer" ) ]
         )
         label
 
@@ -181,7 +229,7 @@ type TextInputMsg
 type InputStatus parsed
     = Intact
     | Debouncing Time.Posix
-    | Touched (Result (List String) parsed)
+    | Touched (Result (List ( String, String )) parsed)
 
 
 type SelectInputMsg a
@@ -193,7 +241,7 @@ type SelectInputMsg a
 select label =
     let
         parse selected =
-            Touched (Result.fromMaybe [ "Must select an option" ] selected)
+            Touched (Result.fromMaybe [ ( label, "Must select an option" ) ] selected)
 
         init =
             ( { selected = Nothing, parsed = Intact }, Cmd.none )
@@ -201,10 +249,10 @@ select label =
     { interface =
         \toSelf model ->
             { view =
-                \toId toHtml items ->
+                \toId toHtml items errs ->
                     let
                         ( icon, message ) =
-                            viewFeedback model.parsed
+                            viewFeedback label model.parsed errs
                     in
                     Html.div []
                         [ Html.strong []
@@ -276,19 +324,29 @@ select label =
 bool label =
     { interface =
         \toSelf model ->
+            let
+                parse m =
+                    Touched (Ok m)
+            in
             { view =
-                Html.div []
-                    [ Html.label []
-                        [ Html.strong [] [ Html.text label ]
-                        , Html.input
-                            [ Html.Attributes.type_ "checkbox"
-                            , Html.Attributes.checked model
-                            , Html.Events.onCheck (\_ -> toSelf (not model))
+                \errs ->
+                    let
+                        ( icon, message ) =
+                            viewFeedback label (parse model) errs
+                    in
+                    Html.div []
+                        [ Html.label []
+                            [ Html.strong [] [ Html.text label ]
+                            , Html.input
+                                [ Html.Attributes.type_ "checkbox"
+                                , Html.Attributes.checked model
+                                , Html.Events.onCheck (\_ -> toSelf (not model))
+                                ]
+                                []
                             ]
-                            []
+                        , Html.small [] [ Html.text message ]
                         ]
-                    ]
-            , parsed = Touched (Ok model)
+            , parsed = parse model
             , reset = toSelf False
             }
     , init =
@@ -314,7 +372,7 @@ textInput parse label =
     in
     { interface =
         \toSelf model ->
-            { view = textInputView label model |> Html.map toSelf
+            { view = \errs -> textInputView label model errs |> Html.map toSelf
             , parsed = model.status
             , touch = toSelf Touch
             , reset = toSelf Reset
@@ -370,10 +428,10 @@ textInput parse label =
     }
 
 
-textInputView label { value, status } =
+textInputView label { value, status } errs =
     let
         ( icon, message ) =
-            viewFeedback status
+            viewFeedback label status errs
     in
     Html.div []
         [ Html.label []
@@ -391,18 +449,38 @@ textInputView label { value, status } =
         ]
 
 
-viewFeedback status =
+viewFeedback label status errs =
+    let
+        relevantErrs =
+            errs
+                |> List.filterMap
+                    (\( key, val ) ->
+                        if key == label then
+                            Just val
+
+                        else
+                            Nothing
+                    )
+    in
     case status of
         Intact ->
             ( "", "" )
 
         Touched parsed ->
-            case parsed of
-                Ok p ->
+            case ( parsed, relevantErrs ) of
+                ( Ok p, [] ) ->
                     ( " ✅", "" )
 
-                Err e ->
-                    ( " 🚫", String.join "\n" e )
+                ( Ok _, _ ) ->
+                    ( " 🚫"
+                    , String.join "\n" relevantErrs
+                    )
+
+                ( Err e, _ ) ->
+                    ( " 🚫"
+                    , String.join "\n"
+                        (List.map Tuple.second e ++ relevantErrs)
+                    )
 
         Debouncing _ ->
             ( " ⌨️", "" )
