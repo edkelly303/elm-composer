@@ -20,6 +20,27 @@ type alias Pet =
     { id : Int, name : String }
 
 
+main :
+    Program
+        ()
+        ( AppModel
+        , ( { status : InputStatus String, value : String }
+          , ( { status : InputStatus Int, value : String }
+            , ( Bool
+              , ( { status : InputStatus Int, value : Maybe Int }, () )
+              )
+            )
+          )
+        )
+        ( Maybe AppMsg
+        , ( Maybe TextInputMsg
+          , ( Maybe TextInputMsg
+            , ( Maybe Bool
+              , ( Maybe (SelectInputMsg Int), () )
+              )
+            )
+          )
+        )
 main =
     Composer.Element.integrate formApp
         |> Composer.Element.withSimpleComponent (string "Name")
@@ -145,7 +166,7 @@ formApp =
                                 ]
                             )
 
-                        Err errs ->
+                        Err _ ->
                             ( FormActive
                             , Cmd.batch
                                 [ send name.touch
@@ -163,7 +184,7 @@ formApp =
             case model of
                 FormActive ->
                     let
-                        errs =
+                        errors =
                             case validate name age cool pet of
                                 Err errs_ ->
                                     errs_
@@ -173,14 +194,18 @@ formApp =
                     in
                     Html.form []
                         [ Html.h1 [] [ Html.text "Create a user" ]
-                        , name.view errs
-                        , age.view errs
-                        , cool.view errs
+                        , name.view errors
+                        , age.view errors
+                        , cool.view errors
                         , pet.view
-                            .id
-                            (\pet_ -> Html.text pet_.name)
-                            [ { id = 1, name = "Fido" }, { id = 2, name = "Miaowcus" } ]
-                            errs
+                            { toId = .id
+                            , toHtml = .name >> Html.text
+                            , items =
+                                [ { id = 1, name = "Fido" }
+                                , { id = 2, name = "Miaowcus" }
+                                ]
+                            , errors = errors
+                            }
                         , Html.button
                             [ Html.Attributes.type_ "button"
                             , Html.Events.onClick (toSelf SubmitClicked)
@@ -258,15 +283,15 @@ select label =
             Touched (Result.fromMaybe [ ( label, "Must select an option" ) ] selected)
 
         init =
-            ( { selected = Nothing, parsed = Intact }, Cmd.none )
+            ( { value = Nothing, status = Intact }, Cmd.none )
     in
     { interface =
         \toSelf model ->
             { view =
-                \toId toHtml items errs ->
+                \{ toId, toHtml, items, errors } ->
                     let
                         ( icon, message ) =
-                            viewFeedback label model.parsed errs
+                            viewFeedback label model.status errors
                     in
                     Html.div []
                         [ Html.strong []
@@ -280,7 +305,7 @@ select label =
                                                 toId item
 
                                             isChecked =
-                                                model.selected == Just id
+                                                model.value == Just id
                                         in
                                         Html.label []
                                             [ Html.input
@@ -310,8 +335,8 @@ select label =
                             ]
                         , Html.small [] [ Html.text message ]
                         ]
-            , selected = model.selected
-            , parsed = model.parsed
+            , selected = model.value
+            , parsed = model.status
             , reset = toSelf Select_Reset
             , touch = toSelf Select_Touch
             }
@@ -322,10 +347,10 @@ select label =
         \msg model ->
             case msg of
                 Select_Selected selection ->
-                    ( { model | selected = selection, parsed = parse selection }, Cmd.none )
+                    ( { model | value = selection, status = parse selection }, Cmd.none )
 
                 Select_Touch ->
-                    ( { model | parsed = parse model.selected }, Cmd.none )
+                    ( { model | status = parse model.value }, Cmd.none )
 
                 Select_Reset ->
                     init
@@ -480,20 +505,14 @@ viewFeedback label status errs =
         Intact ->
             ( "", "" )
 
-        Touched parsed ->
-            case ( parsed, relevantErrs ) of
-                ( Ok p, [] ) ->
+        Touched _ ->
+            case relevantErrs of
+                [] ->
                     ( " ✅", "" )
 
-                ( Ok _, _ ) ->
+                _ ->
                     ( " 🚫"
                     , String.join "\n" relevantErrs
-                    )
-
-                ( Err e, _ ) ->
-                    ( " 🚫"
-                    , String.join "\n"
-                        (List.map Tuple.second e ++ relevantErrs)
                     )
 
         Debouncing _ ->
