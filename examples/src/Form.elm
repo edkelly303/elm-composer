@@ -13,56 +13,37 @@ import Time
 
 
 type alias User =
-    { name : String, age : Int, cool : Bool, pet : Int }
+    { name : String, age : Int, cool : Bool, petId : Int }
 
 
 type alias Pet =
     { id : Int, name : String }
 
 
-main :
-    Program
-        ()
-        ( AppModel
-        , ( { status : InputStatus String, value : String }
-          , ( { status : InputStatus Int, value : String }
-            , ( Bool
-              , ( { status : InputStatus Int, value : Maybe Int }, () )
-              )
-            )
-          )
-        )
-        ( Maybe AppMsg
-        , ( Maybe TextInputMsg
-          , ( Maybe TextInputMsg
-            , ( Maybe Bool
-              , ( Maybe (SelectInputMsg Int), () )
-              )
-            )
-          )
-        )
 main =
     Composer.Element.integrate formApp
         |> Composer.Element.withSimpleComponent (string "Name")
         |> Composer.Element.withSimpleComponent (int "Age")
         |> Composer.Element.withSimpleComponent (bool "Is cool?")
-        |> Composer.Element.withSimpleComponent (select "Pet")
+        |> Composer.Element.withComponent
+            (select "Pet")
+            (\toApp _ -> { petUpdated = \maybePetId -> toApp (PetUpdated maybePetId) })
         |> Composer.Element.groupedAs
-            (\name age cool petId ->
+            (\name age cool pet ->
                 { name = name
                 , age = age
                 , cool = cool
-                , pet = petId
+                , pet = pet
                 }
             )
         |> Browser.element
 
 
-pure =
+succeed =
     Ok
 
 
-andMap statusArg resCtor =
+check statusArg resCtor =
     case ( statusArg, resCtor ) of
         ( Touched (Ok arg), Ok ctor ) ->
             Ok (ctor arg)
@@ -83,25 +64,7 @@ andMap statusArg resCtor =
             Err []
 
 
-map2 f status1 status2 =
-    case ( status1, status2 ) of
-        ( Touched (Ok arg1), Touched (Ok arg2) ) ->
-            Touched (Ok (f arg1 arg2))
-
-        ( Touched (Ok _), Touched (Err errs) ) ->
-            Touched (Err errs)
-
-        ( Touched (Err errs), Touched (Ok _) ) ->
-            Touched (Err errs)
-
-        ( Touched (Err errs1), Touched (Err errs2) ) ->
-            Touched (Err (errs2 ++ errs1))
-
-        ( _, _ ) ->
-            Touched (Err [])
-
-
-andThen2 f status1 status2 =
+multi2 f status1 status2 =
     case ( status1, status2 ) of
         ( Touched (Ok arg1), Touched (Ok arg2) ) ->
             Touched (f arg1 arg2)
@@ -122,6 +85,7 @@ andThen2 f status1 status2 =
 type AppMsg
     = SubmitClicked
     | BackClicked
+    | PetUpdated (Maybe Int)
 
 
 type AppModel
@@ -132,21 +96,24 @@ type AppModel
 formApp =
     let
         validate name age cool pet =
-            pure (\n { a, c } p -> User n a c p)
-                |> andMap name.parsed
-                |> andMap
-                    (andThen2
-                        (\a c ->
-                            if c && a > 40 then
-                                Err [ ( "Is cool?", String.fromInt a ++ " is too old to be cool" ) ]
+            succeed
+                (\name_ { age_, cool_ } pet_ ->
+                    User name_ age_ cool_ pet_
+                )
+                |> check name.parsed
+                |> check
+                    (multi2
+                        (\age_ cool_ ->
+                            if cool_ && age_ > 40 then
+                                Err [ ( "Is cool?", String.fromInt age_ ++ " is too old to be cool" ) ]
 
                             else
-                                Ok { a = a, c = c }
+                                Ok { age_ = age_, cool_ = cool_ }
                         )
                         age.parsed
                         cool.parsed
                     )
-                |> andMap pet.parsed
+                |> check pet.parsed
     in
     { init =
         \{} _ () ->
@@ -179,6 +146,13 @@ formApp =
                     ( FormActive
                     , Cmd.none
                     )
+
+                PetUpdated maybePetId ->
+                    let
+                        _ =
+                            Debug.log "Id changed" maybePetId
+                    in
+                    ( model, Cmd.none )
     , view =
         \{ name, age, cool, pet } toSelf model ->
             case model of
@@ -341,13 +315,15 @@ select label =
             , touch = toSelf Select_Touch
             }
     , init =
-        \flags ->
+        \flags toSelf ->
             init
     , update =
-        \msg model ->
+        \app toSelf msg model ->
             case msg of
                 Select_Selected selection ->
-                    ( { model | value = selection, status = parse selection }, Cmd.none )
+                    ( { model | value = selection, status = parse selection }
+                    , send (app.petUpdated selection)
+                    )
 
                 Select_Touch ->
                     ( { model | status = parse model.value }, Cmd.none )
@@ -355,7 +331,7 @@ select label =
                 Select_Reset ->
                     init
     , subscriptions =
-        \model ->
+        \app toSelf model ->
             Sub.none
     }
 
