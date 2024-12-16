@@ -5,7 +5,6 @@ import Composer.Element
 import Html
 import Html.Attributes
 import Html.Events
-import Process
 import Task
 import Time
 
@@ -23,7 +22,7 @@ main =
     Composer.Element.integrate app_
         |> Composer.Element.withComponent
             timerComponent
-            (\toApp appModel ->
+            (\toApp _ ->
                 { timerExpired = toApp TimerExpired
                 , timerReset = toApp TimerReset
                 }
@@ -43,10 +42,10 @@ type AppMsg
 
 app_ =
     { init =
-        \components toSelf flags ->
+        \_ _ _ ->
             ( { timerExpired = False }, Cmd.none )
     , update =
-        \{ timer } toSelf msg model ->
+        \_ _ msg model ->
             case msg of
                 TimerExpired ->
                     ( { model | timerExpired = True }, Cmd.none )
@@ -54,7 +53,7 @@ app_ =
                 TimerReset ->
                     ( { model | timerExpired = False }, Cmd.none )
     , view =
-        \{ timer } toSelf model ->
+        \{ timer } _ model ->
             Html.div []
                 [ Html.p []
                     [ Html.text
@@ -110,7 +109,7 @@ app_ =
                     [ Html.text "Reset timer" ]
                 ]
     , subscriptions =
-        \{ timer } toSelf model ->
+        \_ _ _ ->
             Sub.none
     }
 
@@ -150,10 +149,10 @@ timerComponent =
                     ]
             }
     , init =
-        \toSelf flags ->
+        \_ _ ->
             ( Nothing, Cmd.none )
     , update =
-        \app toSelf msg model ->
+        \app _ msg model ->
             case msg of
                 Start ->
                     ( Just 10, Cmd.none )
@@ -168,7 +167,7 @@ timerComponent =
                 Reset ->
                     ( Nothing, send app.timerReset )
     , subscriptions =
-        \app toSelf model ->
+        \_ toSelf model ->
             case model of
                 Nothing ->
                     Sub.none

@@ -1,14 +1,11 @@
 module Form exposing (main)
 
 import Browser
-import Composer exposing (view)
 import Composer.Element
-import Dict exposing (Dict)
 import Html
 import Html.Attributes
 import Html.Events
 import Http
-import Json.Decode as JD
 import Process
 import Task
 import Time
@@ -18,7 +15,7 @@ main : Program () ProgModel ProgMsg
 main =
     Browser.element
         { init =
-            \flags ->
+            \_ ->
                 form.init ()
                     |> Tuple.mapSecond (Cmd.map FormMsg)
         , update =
@@ -246,7 +243,7 @@ formApp =
                 |> check toy.parsed
     in
     { init =
-        \{} _ () ->
+        \_ _ () ->
             ( { page = FormActive, pets = pets, toys = [] }, Cmd.none )
     , update =
         \{ name, age, cool, pet, toy } _ msg model ->
@@ -337,7 +334,7 @@ formApp =
                             [ Html.text "Go back!" ]
                         ]
     , subscriptions =
-        \{} _ model ->
+        \_ _ _ ->
             Sub.none
     }
 
@@ -455,10 +452,10 @@ select label =
             , touch = toSelf Select_Touch
             }
     , init =
-        \flags toSelf ->
+        \_ _ ->
             init
     , update =
-        \app toSelf msg model ->
+        \app _ msg model ->
             case msg of
                 Select_Selected selection ->
                     ( { model | value = selection, status = parse selection }
@@ -471,7 +468,7 @@ select label =
                 Select_Reset ->
                     init
     , subscriptions =
-        \app toSelf model ->
+        \_ _ _ ->
             Sub.none
     }
 
@@ -486,7 +483,7 @@ bool label =
             { view =
                 \errs ->
                     let
-                        ( icon, message ) =
+                        ( _, message ) =
                             viewFeedback label (parse model) errs
                     in
                     Html.div []
@@ -505,13 +502,13 @@ bool label =
             , reset = toSelf False
             }
     , init =
-        \flags ->
+        \_ ->
             ( False, Cmd.none )
     , update =
-        \msg model ->
+        \msg _ ->
             ( msg, Cmd.none )
     , subscriptions =
-        \model ->
+        \_ ->
             Sub.none
     }
 
@@ -533,7 +530,7 @@ textInput parse label =
             , reset = toSelf Reset
             }
     , init =
-        \flags ->
+        \_ ->
             init
     , update =
         \msg model ->
@@ -578,7 +575,7 @@ textInput parse label =
                     , Cmd.none
                     )
     , subscriptions =
-        \model ->
+        \_ ->
             Sub.none
     }
 

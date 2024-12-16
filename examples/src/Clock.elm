@@ -39,14 +39,6 @@ type alias Components =
     ( Html.Html ProgMsg, Html.Html ProgMsg )
 
 
-type alias ClockToApp =
-    { hours : Int, minutes : Int, seconds : Int }
-
-
-type alias AppToClock =
-    ()
-
-
 main : Program Flags ProgModel ProgMsg
 main =
     Composer.Document.integrate clockApp
@@ -64,13 +56,13 @@ clockApp :
     }
 clockApp =
     { init =
-        \( c1, c2 ) toSelf () ->
+        \( _, _ ) _ () ->
             ( (), Cmd.none )
     , update =
-        \( c1, c2 ) toSelf msg model ->
+        \( _, _ ) _ _ _ ->
             ( (), Cmd.none )
     , view =
-        \( c1, c2 ) toSelf model ->
+        \( c1, c2 ) _ _ ->
             { title = "Clock demo"
             , body =
                 [ Html.div [] [ c1 ]
@@ -78,7 +70,7 @@ clockApp =
                 ]
             }
     , subscriptions =
-        \( c1, c2 ) toSelf model ->
+        \( _, _ ) _ _ ->
             Sub.none
     }
 
@@ -110,14 +102,14 @@ clockElement =
                     ++ String.fromInt seconds
                 )
     , init =
-        \flags ->
+        \_ ->
             ( Time.millisToPosix 0
             , Task.perform Tick Time.now
             )
     , update =
-        \(Tick now) model ->
+        \(Tick now) _ ->
             ( now, Cmd.none )
     , subscriptions =
-        \model ->
+        \_ ->
             Time.every 1000 Tick
     }

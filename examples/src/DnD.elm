@@ -6,7 +6,6 @@ import Composer.Application
 import DnDList
 import Html
 import Html.Attributes
-import Process
 import Task
 import Url
 
@@ -93,10 +92,10 @@ dndApp :
     }
 dndApp =
     { init =
-        \components toSelf flags url key ->
+        \_ _ _ _ key ->
             ( { fruits = fruits, key = key }, Cmd.none )
     , update =
-        \components toSelf msg model ->
+        \_ _ msg model ->
             case msg of
                 ItemsUpdated fruits_ ->
                     ( { model | fruits = fruits_ }, Cmd.none )
@@ -107,7 +106,7 @@ dndApp =
                 UrlChanged _ ->
                     ( model, Cmd.none )
     , view =
-        \components toSelf model ->
+        \components _ model ->
             { title = "Drag and drop demo"
             , body =
                 [ Html.div []
@@ -119,7 +118,7 @@ dndApp =
                 ]
             }
     , subscriptions =
-        \components toSelf model -> Sub.none
+        \_ _ _ -> Sub.none
     , onUrlRequest = UrlRequested
     , onUrlChange = UrlChanged
     }
@@ -143,7 +142,7 @@ dndComponent =
         \toSelf model ->
             { view = view toSelf model }
     , init =
-        \toSelf flags ->
+        \_ _ ->
             ( { dnd = system.model }
             , Cmd.none
             )
@@ -162,7 +161,7 @@ dndComponent =
                         ]
                     )
     , subscriptions =
-        \app toSelf model ->
+        \_ toSelf model ->
             subscriptions model
                 |> Sub.map toSelf
     }
