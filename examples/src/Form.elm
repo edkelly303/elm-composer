@@ -112,10 +112,11 @@ type alias PetToy =
 
 petToys : List PetToy
 petToys =
-    [ { id = 1, name = "ball of string", petId = 2 }
-    , { id = 2, name = "scratching post", petId = 2 }
-    , { id = 3, name = "bone", petId = 1 }
-    , { id = 4, name = "fluffy penguin", petId = 1 }
+    [ { id = 1, name = "Juicy bone", petId = 1 }
+    , { id = 2, name = "Fluffy penguin", petId = 1 }
+    , { id = 3, name = "Big stick", petId = 1 }
+    , { id = 4, name = "Ball of string", petId = 2 }
+    , { id = 5, name = "Laser pointer", petId = 2 }
     ]
 
 
