@@ -257,6 +257,7 @@ formApp =
                                 , send age.reset
                                 , send cool.reset
                                 , send pet.reset
+                                , send toy.reset
                                 ]
                             )
 
@@ -266,6 +267,7 @@ formApp =
                                 [ send name.touch
                                 , send age.touch
                                 , send pet.touch
+                                , send toy.touch
                                 ]
                             )
 
@@ -279,7 +281,7 @@ formApp =
                         _ =
                             Debug.log "Pet id changed" maybePetId
                     in
-                    ( model, Cmd.none )
+                    ( model, send toy.reset )
 
                 ToyUpdated maybeToyId ->
                     let
@@ -421,7 +423,7 @@ select label =
                                         Html.label []
                                             [ Html.input
                                                 [ Html.Attributes.type_ "radio"
-                                                , Html.Attributes.name "radio"
+                                                , Html.Attributes.name (label ++ "-radio")
                                                 , Html.Attributes.checked isChecked
                                                 , Html.Events.onCheck
                                                     (\nowChecked ->
