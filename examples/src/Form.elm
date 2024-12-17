@@ -631,13 +631,21 @@ select label =
                     Html.div []
                         [ Html.strong []
                             [ Html.text label ]
-                        , Html.span []
-                            [ Html.input
-                                [ Html.Attributes.type_ "search"
-                                , Html.Events.onInput (toSelf << Select_Filtered)
-                                , Html.Attributes.value model.value.filter
+                        , Html.div []
+                            [ Html.span []
+                                [ Html.text "Filter"
+                                , Html.input
+                                    [ Html.Attributes.type_ "search"
+                                    , Html.Events.onInput (toSelf << Select_Filtered)
+                                    , Html.Attributes.value model.value.filter
+                                    ]
+                                    []
+                                , Html.button
+                                    [ Html.Attributes.type_ "button"
+                                    , Html.Events.onClick (toSelf (Select_Filtered ""))
+                                    ]
+                                    [ Html.text "x" ]
                                 ]
-                                []
                             , Html.div []
                                 (case filtered of
                                     [] ->
