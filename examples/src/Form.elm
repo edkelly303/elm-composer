@@ -35,7 +35,7 @@ type alias Pet =
 pets : List Pet
 pets =
     [ { id = 1, name = "Fido" }
-    , { id = 2, name = "Miaowcus" }
+    , { id = 2, name = "Kitty" }
     ]
 
 
@@ -269,30 +269,33 @@ type AppPage
     | Success User
 
 
-app =
-    let
-        validate name dateOfBirth height cool pet toy =
-            succeed
-                (\name_ dateOfBirth_ { height_, cool_ } pet_ toy_ ->
-                    User name_ dateOfBirth_ height_ cool_ pet_ toy_
-                )
-                |> check name.parsed
-                |> check dateOfBirth.parsed
-                |> check
-                    (multi2
-                        (\height_ cool_ ->
-                            if cool_ && height_ > 180 then
-                                Err [ ( "Is cool?", String.fromInt height_ ++ " is too tall to be cool" ) ]
+validate name dateOfBirth height cool pet toy =
+    succeed
+        (\name_ dateOfBirth_ { height_, cool_ } pet_ toy_ ->
+            User name_ dateOfBirth_ height_ cool_ pet_ toy_
+        )
+        |> check name.parsed
+        |> check dateOfBirth.parsed
+        |> check
+            (multi2
+                (\height_ cool_ ->
+                    if cool_ && height_ > 180 then
+                        Just
+                            { height_ = height_
+                            , cool_ = cool_
+                            }
 
-                            else
-                                Ok { height_ = height_, cool_ = cool_ }
-                        )
-                        height.parsed
-                        cool.parsed
-                    )
-                |> check pet.parsed
-                |> check toy.parsed
-    in
+                    else
+                        Nothing
+                )
+                height.parsed
+                cool.parsed
+            )
+        |> check pet.parsed
+        |> check toy.parsed
+
+
+app =
     { init =
         \_ _ () ->
             ( { page = FormActive }, Cmd.none )
@@ -399,19 +402,19 @@ succeed =
     Ok
 
 
-check statusArg resCtor =
-    case ( statusArg, resCtor ) of
-        ( Touched (Ok arg), Ok ctor ) ->
+check parsed resCtor =
+    case ( parsed.status, resCtor ) of
+        ( Touched (Just arg), Ok ctor ) ->
             Ok (ctor arg)
 
-        ( Touched (Ok _), Err errs ) ->
+        ( Touched (Just _), Err errs ) ->
             Err errs
 
-        ( Touched (Err errs), Ok _ ) ->
-            Err errs
+        ( Touched Nothing, Ok _ ) ->
+            Err []
 
-        ( Touched (Err errs1), Err errs2 ) ->
-            Err (errs2 ++ errs1)
+        ( Touched Nothing, Err errs2 ) ->
+            Err errs2
 
         ( _, Err errs ) ->
             Err errs
@@ -420,28 +423,20 @@ check statusArg resCtor =
             Err []
 
 
-multi2 f status1 status2 =
-    case ( status1, status2 ) of
-        ( Touched (Ok arg1), Touched (Ok arg2) ) ->
-            Touched (f arg1 arg2)
+multi2 f parsed1 parsed2 =
+    let
+        newParsed =
+            { status = Intact, feedback = parsed1.feedback ++ parsed2.feedback }
+    in
+    { newParsed
+        | status =
+            case ( parsed1.status, parsed2.status ) of
+                ( Touched (Just arg1), Touched (Just arg2) ) ->
+                    Touched (f arg1 arg2)
 
-        ( Touched (Ok _), Touched (Err errs) ) ->
-            Touched (Err errs)
-
-        ( Touched (Err errs), Touched (Ok _) ) ->
-            Touched (Err errs)
-
-        ( Touched (Err errs1), Touched (Err errs2) ) ->
-            Touched (Err (errs2 ++ errs1))
-
-        ( Touched (Err errs), _ ) ->
-            Touched (Err errs)
-
-        ( _, Touched (Err errs) ) ->
-            Touched (Err errs)
-
-        ( _, _ ) ->
-            Touched (Err [])
+                _ ->
+                    Touched Nothing
+    }
 
 
 
@@ -449,13 +444,24 @@ multi2 f status1 status2 =
 
 
 type alias InputModel value parsed =
-    { status : InputStatus parsed, value : value }
+    { parsed :
+        { status : InputStatus parsed
+        , feedback : List { message : String, outcome : Outcome }
+        }
+    , value : value
+    }
 
 
 type InputStatus parsed
     = Intact
     | Debouncing Time.Posix
-    | Touched (Result (List ( String, String )) parsed)
+    | Touched (Maybe parsed)
+
+
+type Outcome
+    = Pass
+    | Fail
+    | Warn
 
 
 
@@ -472,25 +478,33 @@ type TextInputMsg
 
 string label =
     textInput
-        (\str ->
-            if String.isEmpty str then
-                Err [ ( label, label ++ " must not be blank" ) ]
+        (\value ->
+            if String.isEmpty value then
+                { status = Touched Nothing
+                , feedback = [ { message = label ++ " must not be blank ", outcome = Fail } ]
+                }
 
             else
-                Ok str
+                { status = Touched (Just value)
+                , feedback = [ { message = label ++ " must not be blank ", outcome = Pass } ]
+                }
         )
         label
 
 
 int label =
     textInput
-        (\str ->
-            case String.toInt str of
+        (\value ->
+            case String.toInt value of
                 Just i ->
-                    Ok i
+                    { status = Touched (Just i)
+                    , feedback = [ { message = label ++ " must be an integer", outcome = Pass } ]
+                    }
 
                 Nothing ->
-                    Err [ ( label, label ++ " must be an integer" ) ]
+                    { status = Touched Nothing
+                    , feedback = [ { message = label ++ " must be an integer", outcome = Fail } ]
+                    }
         )
         label
 
@@ -499,7 +513,7 @@ textInput parse label =
     let
         init =
             ( { value = ""
-              , status = Intact
+              , parsed = { status = Intact, feedback = [] }
               }
             , Cmd.none
             )
@@ -507,7 +521,7 @@ textInput parse label =
     { interface =
         \toSelf model ->
             { view = \errs -> textInputView label model errs |> Html.map toSelf
-            , parsed = model.status
+            , parsed = model.parsed
             , touch = toSelf Text_Touched
             , reset = toSelf Text_Reset
             }
@@ -526,28 +540,29 @@ textInput parse label =
                     init
 
                 Text_Touched ->
-                    ( { model
-                        | status =
-                            case model.status of
-                                Touched _ ->
-                                    model.status
+                    ( case model.parsed.status of
+                        Touched _ ->
+                            model
 
-                                _ ->
-                                    Touched (parse model.value)
-                      }
+                        _ ->
+                            { model | parsed = parse model.value }
                     , Cmd.none
                     )
 
                 Text_DebounceStarted now ->
-                    ( { model | status = Debouncing now }
+                    let
+                        parsed =
+                            model.parsed
+                    in
+                    ( { model | parsed = { parsed | status = Debouncing now } }
                     , Task.perform (\() -> Text_DebounceChecked now) (Process.sleep 500)
                     )
 
                 Text_DebounceChecked now ->
-                    ( case model.status of
+                    ( case model.parsed.status of
                         Debouncing current ->
                             if now == current then
-                                { model | status = Touched (parse model.value) }
+                                { model | parsed = parse model.value }
 
                             else
                                 model
@@ -562,10 +577,10 @@ textInput parse label =
     }
 
 
-textInputView label { value, status } errs =
+textInputView label { value, parsed } errs =
     let
         ( icon, message ) =
-            viewFeedback label status errs
+            viewFeedback label parsed errs
     in
     Html.div []
         [ Html.label []
@@ -596,7 +611,7 @@ type DateInputMsg
 date label =
     { init =
         \flags ->
-            ( { value = "", status = Intact }
+            ( { value = "", parsed = { status = Intact, feedback = [] } }
             , Task.perform (\now -> Date_Changed (Date.toIsoString (Date.fromPosix Time.utc now))) Time.now
             )
     , interface =
@@ -605,7 +620,7 @@ date label =
                 \errors ->
                     let
                         ( icon, message ) =
-                            viewFeedback label model.status errors
+                            viewFeedback label model.parsed errors
                     in
                     Html.div []
                         [ Html.strong [] [ Html.text label ]
@@ -620,7 +635,7 @@ date label =
                         , Html.text icon
                         , Html.small [] [ Html.text message ]
                         ]
-            , parsed = model.status
+            , parsed = model.parsed
             , touch = toSelf Date_Touched
             , reset = toSelf (Date_Changed "")
             }
@@ -628,20 +643,27 @@ date label =
         \msg model ->
             let
                 parse str =
-                    Date.fromIsoString str
-                        |> Result.mapError (\e -> [ ( label, e ) ])
-                        |> Touched
+                    case Date.fromIsoString str of
+                        Ok date_ ->
+                            { status = Touched (Just date_)
+                            , feedback = []
+                            }
+
+                        Err e ->
+                            { status = Touched Nothing
+                            , feedback = []
+                            }
             in
             case msg of
                 Date_Touched ->
-                    ( { model | status = parse model.value }
+                    ( { model | parsed = parse model.value }
                     , Cmd.none
                     )
 
                 Date_Changed str ->
                     ( { model
                         | value = str
-                        , status = parse str
+                        , parsed = parse str
                       }
                     , Cmd.none
                     )
@@ -665,10 +687,26 @@ type SelectInputMsg a
 select label =
     let
         parse selected =
-            Touched (Result.fromMaybe [ ( label, "Must select an option" ) ] selected)
+            { status = Touched selected
+            , feedback =
+                [ { message = "Must select an option"
+                  , outcome =
+                        case selected of
+                            Nothing ->
+                                Fail
+
+                            Just _ ->
+                                Pass
+                  }
+                ]
+            }
 
         init =
-            ( { value = { selected = Nothing, filter = "" }, status = Intact }, Cmd.none )
+            ( { value = { selected = Nothing, filter = "" }
+              , parsed = { status = Intact, feedback = [] }
+              }
+            , Cmd.none
+            )
     in
     { interface =
         \toSelf model ->
@@ -676,7 +714,7 @@ select label =
                 \{ toId, toHtml, toString, items, errors } ->
                     let
                         ( icon, message ) =
-                            viewFeedback label model.status errors
+                            viewFeedback label model.parsed errors
 
                         filtered =
                             if String.isEmpty model.value.filter then
@@ -756,7 +794,7 @@ select label =
                         , Html.small [] [ Html.text message ]
                         ]
             , selected = model.value.selected
-            , parsed = model.status
+            , parsed = model.parsed
             , reset = toSelf Select_Reset
             , touch = toSelf Select_Touched
             }
@@ -786,7 +824,7 @@ select label =
                                 | filter = filter
                                 , selected = Nothing
                             }
-                        , status = parse Nothing
+                        , parsed = parse Nothing
                       }
                     , notify Nothing
                     )
@@ -796,12 +834,12 @@ select label =
                         value =
                             model.value
                     in
-                    ( { model | value = { value | selected = selection }, status = parse selection }
+                    ( { model | value = { value | selected = selection }, parsed = parse selection }
                     , notify selection
                     )
 
                 Select_Touched ->
-                    ( { model | status = parse model.value.selected }
+                    ( { model | parsed = parse model.value.selected }
                     , Cmd.none
                     )
 
@@ -829,7 +867,7 @@ bool label =
                 \errs ->
                     let
                         ( icon, message ) =
-                            viewFeedback label model.status errs
+                            viewFeedback label model.parsed errs
                     in
                     Html.div []
                         [ Html.label []
@@ -845,21 +883,31 @@ bool label =
                         , Html.text icon
                         , Html.small [] [ Html.text message ]
                         ]
-            , parsed = model.status
+            , parsed = model.parsed
             , reset = toSelf (Bool_Changed False)
             , touch = toSelf Bool_Touched
             }
     , init =
         \_ ->
-            ( { value = True, status = Intact }, Cmd.none )
+            ( { value = True, parsed = { status = Intact, feedback = [] } }
+            , Cmd.none
+            )
     , update =
         \msg model ->
             case msg of
                 Bool_Changed b ->
-                    ( { value = b, status = Touched (Ok b) }, Cmd.none )
+                    ( { value = b
+                      , parsed = { status = Touched (Just b), feedback = [] }
+                      }
+                    , Cmd.none
+                    )
 
                 Bool_Touched ->
-                    ( { model | status = Touched (Ok model.value) }, Cmd.none )
+                    ( { model
+                        | parsed = { status = Touched (Just model.value), feedback = [] }
+                      }
+                    , Cmd.none
+                    )
     , subscriptions =
         \_ ->
             Sub.none
@@ -870,7 +918,7 @@ bool label =
 -- INPUT VIEW HELPERS
 
 
-viewFeedback label status errs =
+viewFeedback label parsed errs =
     let
         relevantErrs =
             errs
@@ -883,7 +931,7 @@ viewFeedback label status errs =
                             Nothing
                     )
     in
-    case status of
+    case parsed.status of
         Intact ->
             ( "", "" )
 
