@@ -188,11 +188,11 @@ form =
             , toy = toy
             }
         )
-        |> withStringField "Name"
-        |> withIntField "Age"
-        |> withBoolField "Is cool?"
-        |> withSelectField "Pet" PetUpdated
-        |> withSelectField "Toy" ToyUpdated
+        |> withField "Name" string
+        |> withField "Age" int
+        |> withField "Is cool?" bool
+        |> withSelectAndNotify "Pet" PetUpdated
+        |> withSelect "Toy"
         |> endForm
 
 
@@ -202,39 +202,35 @@ defineForm shared grouper =
     }
 
 
-withStringField label builder =
+withField label field builder =
     { fields =
         builder.fields
-            |> withSimpleComponent (string label)
+            |> withSimpleComponent (field label)
     , grouper = builder.grouper
     }
 
 
-withIntField label builder =
+withSelect label builder =
     { fields =
         builder.fields
-            |> withSimpleComponent (int label)
+            |> withComponent
+                (select label)
+                (\_ _ -> { selectionUpdated = Nothing })
     , grouper = builder.grouper
     }
 
 
-withBoolField label builder =
-    { fields =
-        builder.fields
-            |> withSimpleComponent (bool label)
-    , grouper = builder.grouper
-    }
-
-
-withSelectField label msg builder =
+withSelectAndNotify label msg builder =
     { fields =
         builder.fields
             |> withComponent
                 (select label)
                 (\toApp _ ->
                     { selectionUpdated =
-                        \maybeSelection ->
-                            toApp (msg maybeSelection)
+                        Just
+                            (\maybeSelection ->
+                                toApp (msg maybeSelection)
+                            )
                     }
                 )
     , grouper = builder.grouper
@@ -254,7 +250,6 @@ type AppMsg
     = SubmitClicked
     | BackClicked
     | PetUpdated (Maybe Int)
-    | ToyUpdated (Maybe Int)
 
 
 type alias AppModel =
@@ -324,19 +319,8 @@ app =
                     , Cmd.none
                     )
 
-                PetUpdated maybePetId ->
-                    let
-                        _ =
-                            Debug.log "Pet id changed" maybePetId
-                    in
+                PetUpdated _ ->
                     ( model, send toy.reset )
-
-                ToyUpdated maybeToyId ->
-                    let
-                        _ =
-                            Debug.log "Toy id changed" maybeToyId
-                    in
-                    ( model, Cmd.none )
     , view =
         \{ name, age, cool, pet, toy } toSelf model toys ->
             case model.page of
@@ -702,6 +686,15 @@ select label =
             init
     , update =
         \app_ _ msg model ->
+            let
+                notify maybe =
+                    case app_.selectionUpdated of
+                        Nothing ->
+                            Cmd.none
+
+                        Just f ->
+                            send (f maybe)
+            in
             case msg of
                 Select_Filtered filter ->
                     let
@@ -716,7 +709,7 @@ select label =
                             }
                         , status = parse Nothing
                       }
-                    , send (app_.selectionUpdated Nothing)
+                    , notify Nothing
                     )
 
                 Select_Selected selection ->
@@ -725,11 +718,13 @@ select label =
                             model.value
                     in
                     ( { model | value = { value | selected = selection }, status = parse selection }
-                    , send (app_.selectionUpdated selection)
+                    , notify selection
                     )
 
                 Select_Touched ->
-                    ( { model | status = parse model.value.selected }, Cmd.none )
+                    ( { model | status = parse model.value.selected }
+                    , Cmd.none
+                    )
 
                 Select_Reset ->
                     init
