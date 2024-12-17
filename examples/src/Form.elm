@@ -2,6 +2,7 @@ module Form exposing (main)
 
 import Browser
 import Composer.Element exposing (..)
+import Date
 import Html
 import Html.Attributes
 import Html.Events
@@ -17,7 +18,8 @@ import Time
 
 type alias User =
     { name : String
-    , age : Int
+    , dateOfBirth : Date.Date
+    , height : Int
     , cool : Bool
     , petId : Int
     , toyId : Int
@@ -149,11 +151,13 @@ peek ( appMsg, _ ) =
 type alias FormModel =
     ( AppModel
     , ( InputModel String String
-      , ( InputModel String Int
-        , ( InputModel Bool Bool
-          , ( InputModel { selected : Maybe Int, filter : String } Int
+      , ( InputModel String Date.Date
+        , ( InputModel String Int
+          , ( InputModel Bool Bool
             , ( InputModel { selected : Maybe Int, filter : String } Int
-              , ()
+              , ( InputModel { selected : Maybe Int, filter : String } Int
+                , ()
+                )
               )
             )
           )
@@ -165,11 +169,13 @@ type alias FormModel =
 type alias FormMsg =
     ( Maybe AppMsg
     , ( Maybe TextInputMsg
-      , ( Maybe TextInputMsg
-        , ( Maybe BoolInputMsg
-          , ( Maybe (SelectInputMsg Int)
+      , ( Maybe DateInputMsg
+        , ( Maybe TextInputMsg
+          , ( Maybe BoolInputMsg
             , ( Maybe (SelectInputMsg Int)
-              , ()
+              , ( Maybe (SelectInputMsg Int)
+                , ()
+                )
               )
             )
           )
@@ -180,16 +186,18 @@ type alias FormMsg =
 
 form =
     defineForm app
-        (\name age cool pet toy ->
+        (\name dateOfBirth height cool pet toy ->
             { name = name
-            , age = age
+            , dateOfBirth = dateOfBirth
+            , height = height
             , cool = cool
             , pet = pet
             , toy = toy
             }
         )
         |> withField "Name" string
-        |> withField "Age" int
+        |> withField "Date of birth" date
+        |> withField "Height" int
         |> withField "Is cool?" bool
         |> withSelectAndNotify "Pet" PetUpdated
         |> withSelect "Toy"
@@ -263,22 +271,23 @@ type AppPage
 
 app =
     let
-        validate name age cool pet toy =
+        validate name dateOfBirth height cool pet toy =
             succeed
-                (\name_ { age_, cool_ } pet_ toy_ ->
-                    User name_ age_ cool_ pet_ toy_
+                (\name_ dateOfBirth_ { height_, cool_ } pet_ toy_ ->
+                    User name_ dateOfBirth_ height_ cool_ pet_ toy_
                 )
                 |> check name.parsed
+                |> check dateOfBirth.parsed
                 |> check
                     (multi2
-                        (\age_ cool_ ->
-                            if cool_ && age_ > 40 then
-                                Err [ ( "Is cool?", String.fromInt age_ ++ " is too old to be cool" ) ]
+                        (\height_ cool_ ->
+                            if cool_ && height_ > 180 then
+                                Err [ ( "Is cool?", String.fromInt height_ ++ " is too tall to be cool" ) ]
 
                             else
-                                Ok { age_ = age_, cool_ = cool_ }
+                                Ok { height_ = height_, cool_ = cool_ }
                         )
-                        age.parsed
+                        height.parsed
                         cool.parsed
                     )
                 |> check pet.parsed
@@ -288,15 +297,16 @@ app =
         \_ _ () ->
             ( { page = FormActive }, Cmd.none )
     , update =
-        \{ name, age, cool, pet, toy } _ msg model ->
+        \{ name, dateOfBirth, height, cool, pet, toy } _ msg model ->
             case msg of
                 SubmitClicked ->
-                    case validate name age cool pet toy of
+                    case validate name dateOfBirth height cool pet toy of
                         Ok user ->
                             ( { model | page = Success user }
                             , Cmd.batch
                                 [ send name.reset
-                                , send age.reset
+                                , send dateOfBirth.reset
+                                , send height.reset
                                 , send cool.reset
                                 , send pet.reset
                                 , send toy.reset
@@ -307,7 +317,8 @@ app =
                             ( { model | page = FormActive }
                             , Cmd.batch
                                 [ send name.touch
-                                , send age.touch
+                                , send dateOfBirth.touch
+                                , send height.touch
                                 , send cool.touch
                                 , send pet.touch
                                 , send toy.touch
@@ -322,12 +333,12 @@ app =
                 PetUpdated _ ->
                     ( model, send toy.reset )
     , view =
-        \{ name, age, cool, pet, toy } toSelf model toys ->
+        \{ name, dateOfBirth, height, cool, pet, toy } toSelf model toys ->
             case model.page of
                 FormActive ->
                     let
                         errors =
-                            case validate name age cool pet toy of
+                            case validate name dateOfBirth height cool pet toy of
                                 Err errs_ ->
                                     errs_
 
@@ -337,7 +348,8 @@ app =
                     Html.form []
                         [ Html.h1 [] [ Html.text "Create a user" ]
                         , name.view errors
-                        , age.view errors
+                        , dateOfBirth.view errors
+                        , height.view errors
                         , cool.view errors
                         , pet.view
                             { toId = .id
@@ -462,7 +474,7 @@ string label =
     textInput
         (\str ->
             if String.isEmpty str then
-                Err [ ( label, "Name must not be blank" ) ]
+                Err [ ( label, label ++ " must not be blank" ) ]
 
             else
                 Ok str
@@ -478,7 +490,7 @@ int label =
                     Ok i
 
                 Nothing ->
-                    Err [ ( label, "Age must be an integer" ) ]
+                    Err [ ( label, label ++ " must be an integer" ) ]
         )
         label
 
@@ -570,6 +582,73 @@ textInputView label { value, status } errs =
             , Html.small [] [ Html.text message ]
             ]
         ]
+
+
+
+-- DATE INPUT
+
+
+type DateInputMsg
+    = Date_Changed String
+    | Date_Touched
+
+
+date label =
+    { init =
+        \flags ->
+            ( { value = "", status = Intact }
+            , Task.perform (\now -> Date_Changed (Date.toIsoString (Date.fromPosix Time.utc now))) Time.now
+            )
+    , interface =
+        \toSelf model ->
+            { view =
+                \errors ->
+                    let
+                        ( icon, message ) =
+                            viewFeedback label model.status errors
+                    in
+                    Html.div []
+                        [ Html.strong [] [ Html.text label ]
+                        , Html.div []
+                            [ Html.input
+                                [ Html.Attributes.type_ "date"
+                                , Html.Attributes.value model.value
+                                , Html.Events.onInput (toSelf << Date_Changed)
+                                ]
+                                []
+                            ]
+                        , Html.text icon
+                        , Html.small [] [ Html.text message ]
+                        ]
+            , parsed = model.status
+            , touch = toSelf Date_Touched
+            , reset = toSelf (Date_Changed "")
+            }
+    , update =
+        \msg model ->
+            let
+                parse str =
+                    Date.fromIsoString str
+                        |> Result.mapError (\e -> [ ( label, e ) ])
+                        |> Touched
+            in
+            case msg of
+                Date_Touched ->
+                    ( { model | status = parse model.value }
+                    , Cmd.none
+                    )
+
+                Date_Changed str ->
+                    ( { model
+                        | value = str
+                        , status = parse str
+                      }
+                    , Cmd.none
+                    )
+    , subscriptions =
+        \model ->
+            Sub.none
+    }
 
 
 
