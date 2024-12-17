@@ -267,6 +267,7 @@ app =
                             , Cmd.batch
                                 [ send name.touch
                                 , send age.touch
+                                , send cool.touch
                                 , send pet.touch
                                 , send toy.touch
                                 ]
@@ -388,6 +389,12 @@ multi2 f status1 status2 =
 
         ( Touched (Err errs1), Touched (Err errs2) ) ->
             Touched (Err (errs2 ++ errs1))
+
+        ( Touched (Err errs), _ ) ->
+            Touched (Err errs)
+
+        ( _, Touched (Err errs) ) ->
+            Touched (Err errs)
 
         ( _, _ ) ->
             Touched (Err [])
@@ -522,6 +529,7 @@ textInputView label { value, status } errs =
             , Html.div []
                 [ Html.input
                     [ Html.Events.onInput Text_Changed
+                    , Html.Events.onBlur Text_Touched
                     , Html.Attributes.value value
                     ]
                     []
@@ -594,6 +602,7 @@ select label =
                                                                         )
                                                                     )
                                                             )
+                                                        , Html.Events.onBlur (toSelf Select_Touched)
                                                         ]
                                                         []
                                                     , toHtml item
@@ -638,6 +647,7 @@ select label =
 
 type BoolInputMsg
     = Bool_Changed Bool
+    | Bool_Touched
 
 
 bool label =
@@ -646,7 +656,7 @@ bool label =
             { view =
                 \errs ->
                     let
-                        ( _, message ) =
+                        ( icon, message ) =
                             viewFeedback label model.status errs
                     in
                     Html.div []
@@ -656,20 +666,28 @@ bool label =
                                 [ Html.Attributes.type_ "checkbox"
                                 , Html.Attributes.checked model.value
                                 , Html.Events.onCheck (\_ -> toSelf (Bool_Changed (not model.value)))
+                                , Html.Events.onBlur (toSelf Bool_Touched)
                                 ]
                                 []
                             ]
+                        , Html.text icon
                         , Html.small [] [ Html.text message ]
                         ]
             , parsed = model.status
             , reset = toSelf (Bool_Changed False)
+            , touch = toSelf Bool_Touched
             }
     , init =
         \_ ->
-            ( { value = False, status = Touched (Ok False) }, Cmd.none )
+            ( { value = True, status = Intact }, Cmd.none )
     , update =
-        \(Bool_Changed msg) _ ->
-            ( { value = msg, status = Touched (Ok msg) }, Cmd.none )
+        \msg model ->
+            case msg of
+                Bool_Changed b ->
+                    ( { value = b, status = Touched (Ok b) }, Cmd.none )
+
+                Bool_Touched ->
+                    ( { model | status = Touched (Ok model.value) }, Cmd.none )
     , subscriptions =
         \_ ->
             Sub.none
