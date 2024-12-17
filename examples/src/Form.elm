@@ -99,14 +99,14 @@ main =
                             requestToys =
                                 -- peek into the form msg and react if necessary
                                 case peek formMsg of
-                                    Just (PetUpdated (Just petId)) ->
+                                    Just (PetUpdated (maybePetId)) ->
                                         -- simulate requesting the list of toys from an API somewhere
                                         Http.get
                                             { expect =
                                                 Http.expectString
                                                     (\_ ->
                                                         petToys
-                                                            |> List.filter (\toy -> toy.petId == petId)
+                                                            |> List.filter (\toy -> Just toy.petId == maybePetId)
                                                             |> Ok
                                                             |> ToysLoaded
                                                     )
@@ -151,8 +151,8 @@ type alias FormModel =
     , ( InputModel String String
       , ( InputModel String Int
         , ( InputModel Bool Bool
-          , ( InputModel (Maybe Int) Int
-            , ( InputModel (Maybe Int) Int
+          , ( InputModel { selected : Maybe Int, filter : String } Int
+            , ( InputModel { selected : Maybe Int, filter : String } Int
               , ()
               )
             )
@@ -358,12 +358,14 @@ app =
                         , pet.view
                             { toId = .id
                             , toHtml = .name >> Html.text
+                            , toString = .name
                             , items = pets
                             , errors = errors
                             }
                         , toy.view
                             { toId = .id
                             , toHtml = .name >> Html.text
+                            , toString = .name
                             , items = toys
                             , errors = errors
                             }
@@ -592,6 +594,7 @@ textInputView label { value, status } errs =
 
 type SelectInputMsg a
     = Select_Selected (Maybe a)
+    | Select_Filtered String
     | Select_Touched
     | Select_Reset
 
@@ -602,22 +605,41 @@ select label =
             Touched (Result.fromMaybe [ ( label, "Must select an option" ) ] selected)
 
         init =
-            ( { value = Nothing, status = Intact }, Cmd.none )
+            ( { value = { selected = Nothing, filter = "" }, status = Intact }, Cmd.none )
     in
     { interface =
         \toSelf model ->
             { view =
-                \{ toId, toHtml, items, errors } ->
+                \{ toId, toHtml, toString, items, errors } ->
                     let
                         ( icon, message ) =
                             viewFeedback label model.status errors
+
+                        filtered =
+                            if String.isEmpty model.value.filter then
+                                items
+
+                            else
+                                List.filter
+                                    (\item ->
+                                        String.contains
+                                            (String.toLower model.value.filter)
+                                            (String.toLower (toString item))
+                                    )
+                                    items
                     in
                     Html.div []
                         [ Html.strong []
                             [ Html.text label ]
-                        , Html.div []
-                            [ Html.span []
-                                (case items of
+                        , Html.span []
+                            [ Html.input
+                                [ Html.Attributes.type_ "search"
+                                , Html.Events.onInput (toSelf << Select_Filtered)
+                                , Html.Attributes.value model.value.filter
+                                ]
+                                []
+                            , Html.div []
+                                (case filtered of
                                     [] ->
                                         [ Html.text "[no options]" ]
 
@@ -629,38 +651,40 @@ select label =
                                                         toId item
 
                                                     isChecked =
-                                                        model.value == Just id
+                                                        model.value.selected == Just id
                                                 in
-                                                Html.label []
-                                                    [ Html.input
-                                                        [ Html.Attributes.type_ "radio"
-                                                        , Html.Attributes.name (label ++ "-radio")
-                                                        , Html.Attributes.checked isChecked
-                                                        , Html.Events.onCheck
-                                                            (\nowChecked ->
-                                                                toSelf
-                                                                    (Select_Selected
-                                                                        (if nowChecked then
-                                                                            Just id
+                                                Html.div []
+                                                    [ Html.label []
+                                                        [ Html.input
+                                                            [ Html.Attributes.type_ "radio"
+                                                            , Html.Attributes.name (label ++ "-radio")
+                                                            , Html.Attributes.checked isChecked
+                                                            , Html.Events.onCheck
+                                                                (\nowChecked ->
+                                                                    toSelf
+                                                                        (Select_Selected
+                                                                            (if nowChecked then
+                                                                                Just id
 
-                                                                         else
-                                                                            Nothing
+                                                                             else
+                                                                                Nothing
+                                                                            )
                                                                         )
-                                                                    )
-                                                            )
-                                                        , Html.Events.onBlur (toSelf Select_Touched)
+                                                                )
+                                                            , Html.Events.onBlur (toSelf Select_Touched)
+                                                            ]
+                                                            []
+                                                        , toHtml item
                                                         ]
-                                                        []
-                                                    , toHtml item
                                                     ]
                                             )
-                                            items
+                                            filtered
                                 )
-                            , Html.text icon
                             ]
+                        , Html.text icon
                         , Html.small [] [ Html.text message ]
                         ]
-            , selected = model.value
+            , selected = model.value.selected
             , parsed = model.status
             , reset = toSelf Select_Reset
             , touch = toSelf Select_Touched
@@ -671,13 +695,33 @@ select label =
     , update =
         \app_ _ msg model ->
             case msg of
+                Select_Filtered filter ->
+                    let
+                        value =
+                            model.value
+                    in
+                    ( { model
+                        | value =
+                            { value
+                                | filter = filter
+                                , selected = Nothing
+                            }
+                        , status = parse Nothing
+                      }
+                    , send (app_.selectionUpdated Nothing)
+                    )
+
                 Select_Selected selection ->
-                    ( { model | value = selection, status = parse selection }
+                    let
+                        value =
+                            model.value
+                    in
+                    ( { model | value = { value | selected = selection }, status = parse selection }
                     , send (app_.selectionUpdated selection)
                     )
 
                 Select_Touched ->
-                    ( { model | status = parse model.value }, Cmd.none )
+                    ( { model | status = parse model.value.selected }, Cmd.none )
 
                 Select_Reset ->
                     init
