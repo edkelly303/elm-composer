@@ -89,7 +89,7 @@ main =
                         , Cmd.none
                         )
 
-                    ToysLoaded (Err e) ->
+                    ToysLoaded (Err _) ->
                         ( model
                         , Cmd.none
                         )
