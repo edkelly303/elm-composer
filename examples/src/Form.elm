@@ -99,7 +99,7 @@ main =
                             requestToys =
                                 -- peek into the form msg and react if necessary
                                 case peek formMsg of
-                                    Just (PetUpdated (maybePetId)) ->
+                                    Just (PetUpdated maybePetId) ->
                                         -- simulate requesting the list of toys from an API somewhere
                                         Http.get
                                             { expect =
