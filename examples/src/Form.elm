@@ -1,7 +1,7 @@
 module Form exposing (main)
 
 import Browser
-import Composer.Element
+import Composer.Element exposing (..)
 import Html
 import Html.Attributes
 import Html.Events
@@ -179,25 +179,71 @@ type alias FormMsg =
 
 
 form =
-    Composer.Element.integrate app
-        |> Composer.Element.withSimpleComponent (string "Name")
-        |> Composer.Element.withSimpleComponent (int "Age")
-        |> Composer.Element.withSimpleComponent (bool "Is cool?")
-        |> Composer.Element.withComponent
-            (select "Pet")
-            (\toApp _ -> { selectionUpdated = \maybePetId -> toApp (PetUpdated maybePetId) })
-        |> Composer.Element.withComponent
-            (select "Toy")
-            (\toApp _ -> { selectionUpdated = \maybeToyId -> toApp (ToyUpdated maybeToyId) })
-        |> Composer.Element.groupedAs
-            (\name age cool pet toy ->
-                { name = name
-                , age = age
-                , cool = cool
-                , pet = pet
-                , toy = toy
-                }
-            )
+    defineForm app
+        (\name age cool pet toy ->
+            { name = name
+            , age = age
+            , cool = cool
+            , pet = pet
+            , toy = toy
+            }
+        )
+        |> withStringField "Name"
+        |> withIntField "Age"
+        |> withBoolField "Is cool?"
+        |> withSelectField "Pet" PetUpdated
+        |> withSelectField "Toy" ToyUpdated
+        |> endForm
+
+
+defineForm shared grouper =
+    { fields = integrate shared
+    , grouper = grouper
+    }
+
+
+withStringField label builder =
+    { fields =
+        builder.fields
+            |> withSimpleComponent (string label)
+    , grouper = builder.grouper
+    }
+
+
+withIntField label builder =
+    { fields =
+        builder.fields
+            |> withSimpleComponent (int label)
+    , grouper = builder.grouper
+    }
+
+
+withBoolField label builder =
+    { fields =
+        builder.fields
+            |> withSimpleComponent (bool label)
+    , grouper = builder.grouper
+    }
+
+
+withSelectField label msg builder =
+    { fields =
+        builder.fields
+            |> withComponent
+                (select label)
+                (\toApp _ ->
+                    { selectionUpdated =
+                        \maybeSelection ->
+                            toApp (msg maybeSelection)
+                    }
+                )
+    , grouper = builder.grouper
+    }
+
+
+endForm builder =
+    builder.fields
+        |> groupedAs builder.grouper
 
 
 
