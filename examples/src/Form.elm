@@ -148,11 +148,11 @@ peek ( appMsg, _ ) =
 
 type alias FormModel =
     ( AppModel
-    , ( { status : InputStatus String, value : String }
-      , ( { status : InputStatus Int, value : String }
-        , ( Bool
-          , ( { status : InputStatus Int, value : Maybe Int }
-            , ( { status : InputStatus Int, value : Maybe Int }
+    , ( InputModel String String
+      , ( InputModel String Int
+        , ( InputModel Bool Bool
+          , ( InputModel (Maybe Int) Int
+            , ( InputModel (Maybe Int) Int
               , ()
               )
             )
@@ -166,7 +166,7 @@ type alias FormMsg =
     ( Maybe AppMsg
     , ( Maybe TextInputMsg
       , ( Maybe TextInputMsg
-        , ( Maybe Bool
+        , ( Maybe BoolInputMsg
           , ( Maybe (SelectInputMsg Int)
             , ( Maybe (SelectInputMsg Int)
               , ()
@@ -397,6 +397,10 @@ multi2 f status1 status2 =
 -- COMPONENT TYPES & DEFINITIONS
 
 
+type alias InputModel value parsed =
+    { status : InputStatus parsed, value : value }
+
+
 type InputStatus parsed
     = Intact
     | Debouncing Time.Posix
@@ -408,11 +412,11 @@ type InputStatus parsed
 
 
 type TextInputMsg
-    = StringChanged String
-    | Touch
-    | Reset
-    | DebounceStarted Time.Posix
-    | DebounceChecked Time.Posix
+    = Text_Changed String
+    | Text_Touched
+    | Text_Reset
+    | Text_DebounceStarted Time.Posix
+    | Text_DebounceChecked Time.Posix
 
 
 string label =
@@ -453,8 +457,8 @@ textInput parse label =
         \toSelf model ->
             { view = \errs -> textInputView label model errs |> Html.map toSelf
             , parsed = model.status
-            , touch = toSelf Touch
-            , reset = toSelf Reset
+            , touch = toSelf Text_Touched
+            , reset = toSelf Text_Reset
             }
     , init =
         \_ ->
@@ -462,15 +466,15 @@ textInput parse label =
     , update =
         \msg model ->
             case msg of
-                StringChanged str ->
+                Text_Changed str ->
                     ( { model | value = str }
-                    , Task.perform DebounceStarted Time.now
+                    , Task.perform Text_DebounceStarted Time.now
                     )
 
-                Reset ->
+                Text_Reset ->
                     init
 
-                Touch ->
+                Text_Touched ->
                     ( { model
                         | status =
                             case model.status of
@@ -483,12 +487,12 @@ textInput parse label =
                     , Cmd.none
                     )
 
-                DebounceStarted now ->
+                Text_DebounceStarted now ->
                     ( { model | status = Debouncing now }
-                    , Task.perform (\() -> DebounceChecked now) (Process.sleep 500)
+                    , Task.perform (\() -> Text_DebounceChecked now) (Process.sleep 500)
                     )
 
-                DebounceChecked now ->
+                Text_DebounceChecked now ->
                     ( case model.status of
                         Debouncing current ->
                             if now == current then
@@ -517,7 +521,7 @@ textInputView label { value, status } errs =
             [ Html.strong [] [ Html.text label ]
             , Html.div []
                 [ Html.input
-                    [ Html.Events.onInput StringChanged
+                    [ Html.Events.onInput Text_Changed
                     , Html.Attributes.value value
                     ]
                     []
@@ -534,7 +538,7 @@ textInputView label { value, status } errs =
 
 type SelectInputMsg a
     = Select_Selected (Maybe a)
-    | Select_Touch
+    | Select_Touched
     | Select_Reset
 
 
@@ -604,7 +608,7 @@ select label =
             , selected = model.value
             , parsed = model.status
             , reset = toSelf Select_Reset
-            , touch = toSelf Select_Touch
+            , touch = toSelf Select_Touched
             }
     , init =
         \_ _ ->
@@ -617,7 +621,7 @@ select label =
                     , send (app_.selectionUpdated selection)
                     )
 
-                Select_Touch ->
+                Select_Touched ->
                     ( { model | status = parse model.value }, Cmd.none )
 
                 Select_Reset ->
@@ -632,40 +636,40 @@ select label =
 -- BOOLEAN INPUT
 
 
+type BoolInputMsg
+    = Bool_Changed Bool
+
+
 bool label =
     { interface =
         \toSelf model ->
-            let
-                parse m =
-                    Touched (Ok m)
-            in
             { view =
                 \errs ->
                     let
                         ( _, message ) =
-                            viewFeedback label (parse model) errs
+                            viewFeedback label model.status errs
                     in
                     Html.div []
                         [ Html.label []
                             [ Html.strong [] [ Html.text label ]
                             , Html.input
                                 [ Html.Attributes.type_ "checkbox"
-                                , Html.Attributes.checked model
-                                , Html.Events.onCheck (\_ -> toSelf (not model))
+                                , Html.Attributes.checked model.value
+                                , Html.Events.onCheck (\_ -> toSelf (Bool_Changed (not model.value)))
                                 ]
                                 []
                             ]
                         , Html.small [] [ Html.text message ]
                         ]
-            , parsed = parse model
-            , reset = toSelf False
+            , parsed = model.status
+            , reset = toSelf (Bool_Changed False)
             }
     , init =
         \_ ->
-            ( False, Cmd.none )
+            ( { value = False, status = Touched (Ok False) }, Cmd.none )
     , update =
-        \msg _ ->
-            ( msg, Cmd.none )
+        \(Bool_Changed msg) _ ->
+            ( { value = msg, status = Touched (Ok msg) }, Cmd.none )
     , subscriptions =
         \_ ->
             Sub.none
