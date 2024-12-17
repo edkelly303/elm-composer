@@ -11,30 +11,85 @@ import Task
 import Time
 
 
+
+-- DOMAIN TYPES & DATA
+
+
+type alias User =
+    { name : String
+    , age : Int
+    , cool : Bool
+    , petId : Int
+    , toyId : Int
+    }
+
+
+type alias Pet =
+    { name : String
+    , id : Int
+    }
+
+
+pets : List Pet
+pets =
+    [ { id = 1, name = "Fido" }
+    , { id = 2, name = "Miaowcus" }
+    ]
+
+
+type alias Toy =
+    { id : Int
+    , name : String
+    , petId : Int
+    }
+
+
+petToys : List Toy
+petToys =
+    [ { id = 1, name = "Juicy bone", petId = 1 }
+    , { id = 2, name = "Fluffy penguin", petId = 1 }
+    , { id = 3, name = "Big stick", petId = 1 }
+    , { id = 4, name = "Ball of string", petId = 2 }
+    , { id = 5, name = "Laser pointer", petId = 2 }
+    ]
+
+
+
+-- PROGRAM TYPES AND MAIN
+
+
+type ProgMsg
+    = FormMsg FormMsg
+    | ToysLoaded (Result Http.Error (List Toy))
+
+
+type alias ProgModel =
+    { form : FormModel
+    , toys : List Toy
+    }
+
+
 main : Program () ProgModel ProgMsg
 main =
     Browser.element
         { init =
             \_ ->
-                form.init ()
-                    |> Tuple.mapSecond (Cmd.map FormMsg)
+                let
+                    ( formModel, formCmd ) =
+                        form.init ()
+                in
+                ( { form = formModel, toys = [] }
+                , Cmd.map FormMsg formCmd
+                )
         , update =
             \msg model ->
                 case msg of
                     ToysLoaded (Ok toys) ->
-                        let
-                            ( appModel, restModels ) =
-                                model
-                        in
-                        ( ( { appModel | toys = toys }, restModels )
+                        ( { model | toys = toys }
                         , Cmd.none
                         )
 
                     ToysLoaded (Err e) ->
-                        let
-                            _ =
-                                Debug.log "request failed" e
-                        in
                         ( model
                         , Cmd.none
                         )
@@ -42,13 +97,18 @@ main =
                     FormMsg formMsg ->
                         let
                             requestToys =
-                                case formMsg of
-                                    ( Just (PetUpdated (Just petId)), _ ) ->
+                                -- peek into the form msg and react if necessary
+                                case peek formMsg of
+                                    Just (PetUpdated (Just petId)) ->
+                                        -- simulate requesting the list of toys from an API somewhere
                                         Http.get
                                             { expect =
                                                 Http.expectString
                                                     (\_ ->
-                                                        ToysLoaded (Ok (List.filter (\toy -> toy.petId == petId) petToys))
+                                                        petToys
+                                                            |> List.filter (\toy -> toy.petId == petId)
+                                                            |> Ok
+                                                            |> ToysLoaded
                                                     )
                                             , url = "http://localhost:8000/clock.html"
                                             }
@@ -57,25 +117,36 @@ main =
                                         Cmd.none
 
                             ( formModel, formCmd ) =
-                                form.update formMsg model
+                                form.update formMsg model.form
                         in
-                        ( formModel
+                        ( { model | form = formModel }
                         , Cmd.batch
                             [ requestToys
                             , Cmd.map FormMsg formCmd
                             ]
                         )
-        , view = form.view >> Html.map FormMsg
-        , subscriptions = form.subscriptions >> Sub.map FormMsg
+        , view =
+            \model ->
+                -- we can pass extra args into the form.view, but we need to pass the form model in first
+                -- this wouldn't work if we tried to do `form.view model.toys model.form`
+                form.view model.form model.toys
+                    |> Html.map FormMsg
+        , subscriptions =
+            \model ->
+                form.subscriptions model.form
+                    |> Sub.map FormMsg
         }
 
 
-type ProgMsg
-    = FormMsg FormMsg
-    | ToysLoaded (Result Http.Error (List PetToy))
+peek ( appMsg, _ ) =
+    appMsg
 
 
-type alias ProgModel =
+
+-- FORM TYPES AND DEFINITION
+
+
+type alias FormModel =
     ( AppModel
     , ( { status : InputStatus String, value : String }
       , ( { status : InputStatus Int, value : String }
@@ -89,35 +160,6 @@ type alias ProgModel =
         )
       )
     )
-
-
-type alias User =
-    { name : String, age : Int, cool : Bool, petId : Int, toyId : Int }
-
-
-type alias Pet =
-    { name : String, id : Int }
-
-
-pets : List Pet
-pets =
-    [ { id = 1, name = "Fido" }
-    , { id = 2, name = "Miaowcus" }
-    ]
-
-
-type alias PetToy =
-    { id : Int, name : String, petId : Int }
-
-
-petToys : List PetToy
-petToys =
-    [ { id = 1, name = "Juicy bone", petId = 1 }
-    , { id = 2, name = "Fluffy penguin", petId = 1 }
-    , { id = 3, name = "Big stick", petId = 1 }
-    , { id = 4, name = "Ball of string", petId = 2 }
-    , { id = 5, name = "Laser pointer", petId = 2 }
-    ]
 
 
 type alias FormMsg =
@@ -137,7 +179,7 @@ type alias FormMsg =
 
 
 form =
-    Composer.Element.integrate formApp
+    Composer.Element.integrate app
         |> Composer.Element.withSimpleComponent (string "Name")
         |> Composer.Element.withSimpleComponent (int "Age")
         |> Composer.Element.withSimpleComponent (bool "Is cool?")
@@ -158,47 +200,8 @@ form =
             )
 
 
-succeed =
-    Ok
 
-
-check statusArg resCtor =
-    case ( statusArg, resCtor ) of
-        ( Touched (Ok arg), Ok ctor ) ->
-            Ok (ctor arg)
-
-        ( Touched (Ok _), Err errs ) ->
-            Err errs
-
-        ( Touched (Err errs), Ok _ ) ->
-            Err errs
-
-        ( Touched (Err errs1), Err errs2 ) ->
-            Err (errs2 ++ errs1)
-
-        ( _, Err errs ) ->
-            Err errs
-
-        ( _, Ok _ ) ->
-            Err []
-
-
-multi2 f status1 status2 =
-    case ( status1, status2 ) of
-        ( Touched (Ok arg1), Touched (Ok arg2) ) ->
-            Touched (f arg1 arg2)
-
-        ( Touched (Ok _), Touched (Err errs) ) ->
-            Touched (Err errs)
-
-        ( Touched (Err errs), Touched (Ok _) ) ->
-            Touched (Err errs)
-
-        ( Touched (Err errs1), Touched (Err errs2) ) ->
-            Touched (Err (errs2 ++ errs1))
-
-        ( _, _ ) ->
-            Touched (Err [])
+-- APP TYPES & DEFINITION
 
 
 type AppMsg
@@ -209,10 +212,7 @@ type AppMsg
 
 
 type alias AppModel =
-    { page : AppPage
-    , pets : List Pet
-    , toys : List PetToy
-    }
+    { page : AppPage }
 
 
 type AppPage
@@ -220,7 +220,7 @@ type AppPage
     | Success User
 
 
-formApp =
+app =
     let
         validate name age cool pet toy =
             succeed
@@ -245,7 +245,7 @@ formApp =
     in
     { init =
         \_ _ () ->
-            ( { page = FormActive, pets = pets, toys = [] }, Cmd.none )
+            ( { page = FormActive }, Cmd.none )
     , update =
         \{ name, age, cool, pet, toy } _ msg model ->
             case msg of
@@ -291,7 +291,7 @@ formApp =
                     in
                     ( model, Cmd.none )
     , view =
-        \{ name, age, cool, pet, toy } toSelf model ->
+        \{ name, age, cool, pet, toy } toSelf model toys ->
             case model.page of
                 FormActive ->
                     let
@@ -311,13 +311,13 @@ formApp =
                         , pet.view
                             { toId = .id
                             , toHtml = .name >> Html.text
-                            , items = model.pets
+                            , items = pets
                             , errors = errors
                             }
                         , toy.view
                             { toId = .id
                             , toHtml = .name >> Html.text
-                            , items = model.toys
+                            , items = toys
                             , errors = errors
                             }
                         , Html.button
@@ -346,6 +346,75 @@ send msg =
     Task.perform identity (Task.succeed msg)
 
 
+
+-- VALIDATION FUNCTIONS
+
+
+succeed =
+    Ok
+
+
+check statusArg resCtor =
+    case ( statusArg, resCtor ) of
+        ( Touched (Ok arg), Ok ctor ) ->
+            Ok (ctor arg)
+
+        ( Touched (Ok _), Err errs ) ->
+            Err errs
+
+        ( Touched (Err errs), Ok _ ) ->
+            Err errs
+
+        ( Touched (Err errs1), Err errs2 ) ->
+            Err (errs2 ++ errs1)
+
+        ( _, Err errs ) ->
+            Err errs
+
+        ( _, Ok _ ) ->
+            Err []
+
+
+multi2 f status1 status2 =
+    case ( status1, status2 ) of
+        ( Touched (Ok arg1), Touched (Ok arg2) ) ->
+            Touched (f arg1 arg2)
+
+        ( Touched (Ok _), Touched (Err errs) ) ->
+            Touched (Err errs)
+
+        ( Touched (Err errs), Touched (Ok _) ) ->
+            Touched (Err errs)
+
+        ( Touched (Err errs1), Touched (Err errs2) ) ->
+            Touched (Err (errs2 ++ errs1))
+
+        ( _, _ ) ->
+            Touched (Err [])
+
+
+
+-- COMPONENT TYPES & DEFINITIONS
+
+
+type InputStatus parsed
+    = Intact
+    | Debouncing Time.Posix
+    | Touched (Result (List ( String, String )) parsed)
+
+
+
+-- TEXT INPUTS
+
+
+type TextInputMsg
+    = StringChanged String
+    | Touch
+    | Reset
+    | DebounceStarted Time.Posix
+    | DebounceChecked Time.Posix
+
+
 string label =
     textInput
         (\str ->
@@ -369,151 +438,6 @@ int label =
                     Err [ ( label, "Age must be an integer" ) ]
         )
         label
-
-
-type TextInputMsg
-    = StringChanged String
-    | Touch
-    | Reset
-    | DebounceStarted Time.Posix
-    | DebounceChecked Time.Posix
-
-
-type InputStatus parsed
-    = Intact
-    | Debouncing Time.Posix
-    | Touched (Result (List ( String, String )) parsed)
-
-
-type SelectInputMsg a
-    = Select_Selected (Maybe a)
-    | Select_Touch
-    | Select_Reset
-
-
-select label =
-    let
-        parse selected =
-            Touched (Result.fromMaybe [ ( label, "Must select an option" ) ] selected)
-
-        init =
-            ( { value = Nothing, status = Intact }, Cmd.none )
-    in
-    { interface =
-        \toSelf model ->
-            { view =
-                \{ toId, toHtml, items, errors } ->
-                    let
-                        ( icon, message ) =
-                            viewFeedback label model.status errors
-                    in
-                    Html.div []
-                        [ Html.strong []
-                            [ Html.text label ]
-                        , Html.div []
-                            [ Html.span []
-                                (List.map
-                                    (\item ->
-                                        let
-                                            id =
-                                                toId item
-
-                                            isChecked =
-                                                model.value == Just id
-                                        in
-                                        Html.label []
-                                            [ Html.input
-                                                [ Html.Attributes.type_ "radio"
-                                                , Html.Attributes.name (label ++ "-radio")
-                                                , Html.Attributes.checked isChecked
-                                                , Html.Events.onCheck
-                                                    (\nowChecked ->
-                                                        toSelf
-                                                            (Select_Selected
-                                                                (if nowChecked then
-                                                                    Just id
-
-                                                                 else
-                                                                    Nothing
-                                                                )
-                                                            )
-                                                    )
-                                                ]
-                                                []
-                                            , toHtml item
-                                            ]
-                                    )
-                                    items
-                                )
-                            , Html.text icon
-                            ]
-                        , Html.small [] [ Html.text message ]
-                        ]
-            , selected = model.value
-            , parsed = model.status
-            , reset = toSelf Select_Reset
-            , touch = toSelf Select_Touch
-            }
-    , init =
-        \_ _ ->
-            init
-    , update =
-        \app _ msg model ->
-            case msg of
-                Select_Selected selection ->
-                    ( { model | value = selection, status = parse selection }
-                    , send (app.selectionUpdated selection)
-                    )
-
-                Select_Touch ->
-                    ( { model | status = parse model.value }, Cmd.none )
-
-                Select_Reset ->
-                    init
-    , subscriptions =
-        \_ _ _ ->
-            Sub.none
-    }
-
-
-bool label =
-    { interface =
-        \toSelf model ->
-            let
-                parse m =
-                    Touched (Ok m)
-            in
-            { view =
-                \errs ->
-                    let
-                        ( _, message ) =
-                            viewFeedback label (parse model) errs
-                    in
-                    Html.div []
-                        [ Html.label []
-                            [ Html.strong [] [ Html.text label ]
-                            , Html.input
-                                [ Html.Attributes.type_ "checkbox"
-                                , Html.Attributes.checked model
-                                , Html.Events.onCheck (\_ -> toSelf (not model))
-                                ]
-                                []
-                            ]
-                        , Html.small [] [ Html.text message ]
-                        ]
-            , parsed = parse model
-            , reset = toSelf False
-            }
-    , init =
-        \_ ->
-            ( False, Cmd.none )
-    , update =
-        \msg _ ->
-            ( msg, Cmd.none )
-    , subscriptions =
-        \_ ->
-            Sub.none
-    }
 
 
 textInput parse label =
@@ -602,6 +526,154 @@ textInputView label { value, status } errs =
             , Html.small [] [ Html.text message ]
             ]
         ]
+
+
+
+-- SELECT INPUT
+
+
+type SelectInputMsg a
+    = Select_Selected (Maybe a)
+    | Select_Touch
+    | Select_Reset
+
+
+select label =
+    let
+        parse selected =
+            Touched (Result.fromMaybe [ ( label, "Must select an option" ) ] selected)
+
+        init =
+            ( { value = Nothing, status = Intact }, Cmd.none )
+    in
+    { interface =
+        \toSelf model ->
+            { view =
+                \{ toId, toHtml, items, errors } ->
+                    let
+                        ( icon, message ) =
+                            viewFeedback label model.status errors
+                    in
+                    Html.div []
+                        [ Html.strong []
+                            [ Html.text label ]
+                        , Html.div []
+                            [ Html.span []
+                                (case items of
+                                    [] ->
+                                        [ Html.text "[no options]" ]
+
+                                    _ ->
+                                        List.map
+                                            (\item ->
+                                                let
+                                                    id =
+                                                        toId item
+
+                                                    isChecked =
+                                                        model.value == Just id
+                                                in
+                                                Html.label []
+                                                    [ Html.input
+                                                        [ Html.Attributes.type_ "radio"
+                                                        , Html.Attributes.name (label ++ "-radio")
+                                                        , Html.Attributes.checked isChecked
+                                                        , Html.Events.onCheck
+                                                            (\nowChecked ->
+                                                                toSelf
+                                                                    (Select_Selected
+                                                                        (if nowChecked then
+                                                                            Just id
+
+                                                                         else
+                                                                            Nothing
+                                                                        )
+                                                                    )
+                                                            )
+                                                        ]
+                                                        []
+                                                    , toHtml item
+                                                    ]
+                                            )
+                                            items
+                                )
+                            , Html.text icon
+                            ]
+                        , Html.small [] [ Html.text message ]
+                        ]
+            , selected = model.value
+            , parsed = model.status
+            , reset = toSelf Select_Reset
+            , touch = toSelf Select_Touch
+            }
+    , init =
+        \_ _ ->
+            init
+    , update =
+        \app_ _ msg model ->
+            case msg of
+                Select_Selected selection ->
+                    ( { model | value = selection, status = parse selection }
+                    , send (app_.selectionUpdated selection)
+                    )
+
+                Select_Touch ->
+                    ( { model | status = parse model.value }, Cmd.none )
+
+                Select_Reset ->
+                    init
+    , subscriptions =
+        \_ _ _ ->
+            Sub.none
+    }
+
+
+
+-- BOOLEAN INPUT
+
+
+bool label =
+    { interface =
+        \toSelf model ->
+            let
+                parse m =
+                    Touched (Ok m)
+            in
+            { view =
+                \errs ->
+                    let
+                        ( _, message ) =
+                            viewFeedback label (parse model) errs
+                    in
+                    Html.div []
+                        [ Html.label []
+                            [ Html.strong [] [ Html.text label ]
+                            , Html.input
+                                [ Html.Attributes.type_ "checkbox"
+                                , Html.Attributes.checked model
+                                , Html.Events.onCheck (\_ -> toSelf (not model))
+                                ]
+                                []
+                            ]
+                        , Html.small [] [ Html.text message ]
+                        ]
+            , parsed = parse model
+            , reset = toSelf False
+            }
+    , init =
+        \_ ->
+            ( False, Cmd.none )
+    , update =
+        \msg _ ->
+            ( msg, Cmd.none )
+    , subscriptions =
+        \_ ->
+            Sub.none
+    }
+
+
+
+-- INPUT VIEW HELPERS
 
 
 viewFeedback label status errs =
